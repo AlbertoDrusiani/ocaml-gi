@@ -1,5 +1,5 @@
 (executable
-  (name BasicTypes)
+  (name Enum)
   (libraries gobject-introspection)
 )
 

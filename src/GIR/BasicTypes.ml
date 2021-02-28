@@ -55,10 +55,10 @@ type type_ml =
     | TGClosure of (type_ml option)
     | TInterface of name
 
-(*prendo un base_info*)
+(*prendo un type_info*)
 let rec cast_to_type_ml a =
-    let type_info = GI.Type_info.cast_from_baseinfo a in
-    match GI.Type_info.get_tag type_info with
+   (* let type_info = GI.Type_info.cast_from_baseinfo a in*)
+    match GI.Type_info.get_tag a with
     | Void -> assert false
     | Boolean -> TBasicType TBoolean
     | Int8 -> TBasicType TInt8
@@ -76,25 +76,25 @@ let rec cast_to_type_ml a =
     | Filename -> TBasicType TFileName
     | Array -> 
             begin
-            let array_type = GI.Type_info.get_array_type type_info in
-            let array_param_type = GI.Type_info.get_param_type type_info in
+            let array_type = GI.Type_info.get_array_type a in
+            let array_param_type = GI.Type_info.get_param_type a in
             match array_type with
             | Some C ->
-                let is_zero_terminated = GI.Type_info.is_zero_terminated type_info in
-                let array_fixed_size = GI.Type_info.get_array_fixed_size type_info in
-                let array_length = GI.Type_info.get_array_length type_info in
-                TCArray (is_zero_terminated, array_fixed_size, array_length, cast_to_type_ml @@ GI.Type_info.cast_to_baseinfo array_param_type)
-            | Some Array -> TGArray (cast_to_type_ml @@ GI.Type_info.cast_to_baseinfo array_param_type)
-            | Some Ptr_array -> TPtrArray (cast_to_type_ml @@ GI.Type_info.cast_to_baseinfo array_param_type)
+                let is_zero_terminated = GI.Type_info.is_zero_terminated a in
+                let array_fixed_size = GI.Type_info.get_array_fixed_size a in
+                let array_length = GI.Type_info.get_array_length a in
+                TCArray (is_zero_terminated, array_fixed_size, array_length, cast_to_type_ml array_param_type)
+            | Some Array -> TGArray (cast_to_type_ml array_param_type)
+            | Some Ptr_array -> TPtrArray (cast_to_type_ml array_param_type)
             | Some Byte_array -> TByteArray
             | None -> TError
             end
     | Interface ->
             let name = 
-                match GI.Base_info.get_name a with
+                match GI.Type_info.cast_to_baseinfo a |> GI.Base_info.get_name with
                 | Some x -> x
                 | None -> "Errore"
-            in let namespace = GI.Base_info.get_namespace a in
+            in let namespace = GI.Type_info.cast_to_baseinfo a |> GI.Base_info.get_namespace in
             TInterface {name = name; namespace = namespace}
     | GList -> TGList (cast_to_type_ml a)
     | GSList -> TGSList (cast_to_type_ml a)
@@ -103,3 +103,21 @@ let rec cast_to_type_ml a =
     | Unichar -> TBasicType TUniChar
 
 
+let print_info ns =
+    let _ = Result.get_ok (GI.Repository.require ns ()) in
+    for i=0 to GI.Repository.get_n_infos ns do
+        let nome = match GI.Repository.get_info ns i |> GI.Base_info.get_name with
+            | Some a -> a
+            | None -> "Errore"
+        in print_endline ("Nome: " ^ nome);
+        let tipo = GI.Repository.get_info ns i |> GI.Base_info.get_type |> B.Base_info.string_of_info_type in
+        print_endline ("Tipo: " ^ tipo);
+        if GI.Repository.get_info ns i |> GI.Base_info.get_type == Type then
+            let tag = GI.Repository.get_info ns i |> GI.Type_info.cast_from_baseinfo |> GI.Type_info.get_tag |> B.Types.string_of_tag in
+            print_endline ("Tag: " ^ tag)
+        else
+            print_endline "Non è un tipo"
+    done
+
+let _ = print_info "Gtk"
+    

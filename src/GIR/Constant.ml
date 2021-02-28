@@ -1,22 +1,24 @@
 
 open BasicTypes
+
 (*open GObject_introspection*)
 
+module GI = GObject_introspection
+module B = Bindings
+
+(*da sistemare i due campi mancanti e value in stringa *)
 type constant = 
     { constantType: type_ml;
-      constantValue: string;
-      constantCType: string;
-      constantDocumentation: string;
-      constantDeprecated: string option;
+      constantValue: GI.Types.argument_t Ctypes.union Ctypes.ptr;
+      (*constantCType: string;
+      constantDocumentation: string;*)
+      constantIsDeprecated: bool;
     }
    
 
-(*passo la a alla funzione*)
-(*let parseConstant namespace name_info = 
-    let info = GObject_introspection.Repository.find_by_name namespace name_info in
-    match info with 
-    | Some a ->     
-            {(*constantValue = GObject_introspection.Constant_info.get_value a;*)
-             constantType = GObject_introspection.Type_info.get_tag @@ GObject_introspection.Type_info.cast_from_baseinfo a}
-    | None -> None
-        | None -> None*)
+(*passo alla funzione la constant_info da fuori perché sto già facendo pattern matching*)
+let parseConstant constant_info  =     
+    {   constantValue = GI.Constant_info.get_value constant_info;
+        constantType = cast_to_type_ml @@ GI.Constant_info.get_type constant_info;
+        constantIsDeprecated = GI.Constant_info.cast_to_baseinfo constant_info |> GI.Base_info.is_deprecated;
+    }
