@@ -1,5 +1,5 @@
 (executable
-  (name Arg)
+  (name Field)
   (libraries gobject-introspection)
 )
 

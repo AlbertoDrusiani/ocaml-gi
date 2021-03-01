@@ -13,10 +13,10 @@ type enumeration_member =
 type enumeration = 
     { enumMembers: enumeration_member list ref; (*TODO da chiedere al prof*)
       enumErrorDomain: string option;
-     (* enumTypeInit: string option;
-      enumDocumentation: string; (*in haskell è Documentation*)
-      enumCType: string;
-      enumStorageBytes: int;*)
+      enumTypeInit: string option;
+      (*enumDocumentation: string; (*in haskell è Documentation*)
+      enumCType: string; forse è la get_type_name in registered_info
+      enumStorageBytes: int;  c'è qualcosa, da guardare meglio*)
       enumDeprecated: bool; (*in haskell è DeprecationInfo*)
     }
 
@@ -43,9 +43,8 @@ let parseEnum e =
     done;
     { enumMembers = l;
       enumErrorDomain = GI.Enum_info.get_error_domain e;
-      (*
-      enumTypeInit = ;
-      enumDocumentation = ;
+      enumTypeInit = GI.Enum_info.cast_to_registeredtypeinfo e |> GI.Registered_type_info.get_type_init;
+     (* enumDocumentation = ;
       enumCType = ;
       enumStorageBytes = ; *)
       enumDeprecated = GI.Enum_info.cast_to_baseinfo e |> GI.Base_info.is_deprecated;
