@@ -7,7 +7,7 @@ type name =
     }
 
 type transfer =
-    | TrasferNothing
+    | TransferNothing
     | TransferContainer
     | TransferEverything
 
