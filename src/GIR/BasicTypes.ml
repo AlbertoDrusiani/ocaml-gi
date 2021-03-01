@@ -103,6 +103,13 @@ let rec cast_to_type_ml a =
     | Unichar -> TBasicType TUniChar
 
 
+let parseTransfer (t : B.Arg_info.transfer) =
+    match t with
+    | Nothing -> TransferNothing
+    | Container -> TransferContainer
+    | Everything -> TransferEverything
+
+
 let print_info ns =
     let _ = Result.get_ok (GI.Repository.require ns ()) in
     for i=0 to GI.Repository.get_n_infos ns do

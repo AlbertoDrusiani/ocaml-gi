@@ -1,5 +1,5 @@
 (executable
-  (name Field)
+  (name Property)
   (libraries gobject-introspection)
 )
 

@@ -29,12 +29,6 @@ type arg =
       transfer: transfer;
     }
 
-(*passo un Bindings.Arg_info.transfer*)    
-let parseTransfer (t : B.Arg_info.transfer) =
-    match t with
-    | Nothing -> TransferNothing
-    | Container -> TransferContainer
-    | Everything -> TransferEverything
             
 (*passo un Bindings.Arg_info.scope_type*)
 let parseScope (s : B.Arg_info.scope_type) =
