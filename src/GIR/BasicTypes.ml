@@ -109,6 +109,16 @@ let parseTransfer (t : B.Arg_info.transfer) =
     | Container -> TransferContainer
     | Everything -> TransferEverything
 
+let getName b =
+    {name =
+        begin 
+        match GI.Base_info.get_name b with 
+            | Some x -> x
+            | None -> "Error"
+        end;
+     namespace = GI.Base_info.get_namespace b;
+    }
+
 
 let print_info ns =
     let _ = Result.get_ok (GI.Repository.require ns ()) in
