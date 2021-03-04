@@ -1,0 +1,5 @@
+(executable
+  (name API)
+  (libraries gobject-introspection)
+)
+

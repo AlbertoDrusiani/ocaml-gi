@@ -1,14 +1,7 @@
-(*record struct*)
-
-(*mi costruisco le strutture dati che non ci sono nelle librerie di OCAML*)
 
 open GObject_introspection
+open ../GIR/BasicTypes
 
-type name 
-   (* { nameLocalName : string;
-      nameNamespace : string option;
-      namePrefix : string option;
-    }*)
 
 
 type api = 
