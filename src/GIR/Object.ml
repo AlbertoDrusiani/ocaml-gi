@@ -6,21 +6,21 @@ open Property
 open Signal
 open Interface
 
-type object_ml =
-    { objParent: name; (*in haskell è name_option*)
-      objTypeInit: string;
-      objTypeName: string;
-      objCType: string option;
-      objRefFunc: string option;
-      objUnrefFunc: string option;
-      objSetValueFunc: string option;
-      objGetValueFunc: string option;
-      objInterfaces: name list ref;
-      objDeprecated: bool;
-      (*objDocumentation: documentation *)
-      objMethods: method_ml list ref;
-      objProperties: property list ref;
-      objSignals: signal list ref;
+type object_ml = {
+    objParent: name; (*in haskell è name_option*)
+    objTypeInit: string;
+    objTypeName: string;
+    objCType: string option;
+    objRefFunc: string option;
+    objUnrefFunc: string option;
+    objSetValueFunc: string option;
+    objGetValueFunc: string option;
+    objInterfaces: name list ref;
+    objDeprecated: bool;
+    (*objDocumentation: documentation *)
+    objMethods: method_ml list ref;
+    objProperties: property list ref;
+    objSignals: signal list ref;
     }
 
 
@@ -42,6 +42,8 @@ let parseObject o =
     for i = GI.Object_info.get_n_signals o downto 0 do
         l_signals := (GI.Object_info.get_signal o i |> parseSignal) :: !l_signals
     done;
+    let name = GI.Object_info.cast_to_baseinfo o |> getName in
+    (name,
     { objParent = GI.Object_info.get_parent o |> getName;
       objTypeInit = GI.Object_info.get_type_init o;
       objTypeName = GI.Object_info.get_type_name o;
@@ -55,7 +57,7 @@ let parseObject o =
       objMethods = l_methods;
       objProperties = l_properties;
       objSignals = l_signals;
-    }
+    })
 
 
 

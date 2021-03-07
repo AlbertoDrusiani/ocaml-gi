@@ -4,18 +4,19 @@ module B = Bindings
 open Arg
 open BasicTypes
 
-type callable =
-    { returnType: type_ml option;
-      returnMayBeNull: bool;
-      returnTransfer: transfer;
-     (* returnDocumentation: documentation;*)
-      args: arg list ref; (*TODO chiedere al prof*)
-      skipReturn: bool;
-      callableThrows: bool;
-      (*callableDeprecated: deprecation_info option;*)
-      (*callableDOcumentation: documentation;*)
-      (*callableResolvable: bool option;*)
+type callable ={ 
+    returnType: type_ml option;
+    returnMayBeNull: bool;
+    returnTransfer: transfer;
+   (* returnDocumentation: documentation;*)
+    args: arg list ref; (*TODO chiedere al prof*)
+    skipReturn: bool;
+    callableThrows: bool;
+    (*callableDeprecated: deprecation_info option;*)
+    (*callableDOcumentation: documentation;*)
+    (*callableResolvable: bool option;*)
     }
+
 
 (*helper per wrappare type_ml in type_ml option*)
 let wrap_callable_return_type a = 
@@ -25,7 +26,6 @@ let wrap_callable_return_type a =
         None
 
     
-
 (*passo un Callable_info*)
 let parseCallable a =
     let l = ref [] in

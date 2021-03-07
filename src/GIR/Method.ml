@@ -12,12 +12,12 @@ type method_type =
 
 
 
-type method_ml =
-    { methodName: name;
-      methodSymbol: string;
-     (* methodType: method_type;*) (*L'API MI RITORNA UNA LISTA, COME GESTISCO?*)
-     (* methodMovedTo: string option;*) (*NON SO COSA SIA*)
-      methodCallable: callable;
+type method_ml ={ 
+    methodName: name;
+    methodSymbol: string;
+   (* methodType: method_type;*) (*L'API MI RITORNA UNA LISTA, COME GESTISCO?*)
+   (* methodMovedTo: string option;*) (*NON SO COSA SIA*)
+    methodCallable: callable;
     }
 
 (*prende un B.Function_info.flags*)

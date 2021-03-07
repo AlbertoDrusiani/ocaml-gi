@@ -109,15 +109,23 @@ let parseTransfer (t : B.Arg_info.transfer) =
     | Container -> TransferContainer
     | Everything -> TransferEverything
 
+(*prende un base_info*)
 let getName b =
     {name =
         begin 
         match GI.Base_info.get_name b with 
-            | Some x -> x
-            | None -> "Error"
+        | Some x -> x
+        | None -> "Error"
         end;
      namespace = GI.Base_info.get_namespace b;
     }
+
+(* prende un base_info*)    
+let getOnlyName b =
+    match GI.Base_info.get_name b with
+    | Some x -> x
+    | None -> "Error"
+
 
 
 let print_info ns =

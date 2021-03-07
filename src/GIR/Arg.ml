@@ -16,17 +16,17 @@ type scope =
     | ScopeTypeNotified
 
 
-type arg = 
-    { argCName: string;
-      argType: type_ml;
-      direction: direction;
-      mayBeNull: bool;
-     (* argDoc: string;*) (*in haskell Documentation*)
-      argScope: scope;
-      argClosure: int;
-      argDestroy: int;
-      argCallerAllocates: bool;
-      transfer: transfer;
+type arg = { 
+    argCName: string;
+    argType: type_ml;
+    direction: direction;
+    mayBeNull: bool;
+   (* argDoc: string;*) (*in haskell Documentation*)
+    argScope: scope;
+    argClosure: int;
+    argDestroy: int;
+    argCallerAllocates: bool;
+    transfer: transfer;
     }
 
             

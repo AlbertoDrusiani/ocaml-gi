@@ -2,10 +2,10 @@ module GI = GObject_introspection
 
 open Callable
 
-type callback =
-    { cbCallback: callable;
-     (* cbCType: string option;*)
-     (* cbDocumentation: documentation;*)
+type callback = { 
+    cbCallback: callable;
+   (* cbCType: string option;*)
+   (* cbDocumentation: documentation;*)
     }
 
 

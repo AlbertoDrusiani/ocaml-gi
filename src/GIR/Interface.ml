@@ -5,16 +5,16 @@ open Method
 open Signal
 open Property
 
-type interface =
-    { ifTypeInit: string option;
-      ifCType: string option;
-     (* ifDocumentation: documentation;*)
-      ifPrerequisites: name list ref;
-      ifProperties: property list ref;
-      ifSignals: signal list ref;
-      ifMethods: method_ml list ref;
-     (* ifAllocationInfo: allocation_info;*)
-      ifDeprecated: bool;
+type interface ={ 
+    ifTypeInit: string option;
+    ifCType: string option;
+   (* ifDocumentation: documentation;*)
+    ifPrerequisites: name list ref;
+    ifProperties: property list ref;
+    ifSignals: signal list ref;
+    ifMethods: method_ml list ref;
+   (* ifAllocationInfo: allocation_info;*)
+    ifDeprecated: bool;
     }
 
 (*prende un base_info*)    
@@ -43,6 +43,8 @@ let parseInterface j =
     for i = GI.Interface_info.get_n_methods j downto 0 do
         l_methods := (GI.Interface_info.get_method j i |> parseMethod) :: !l_methods
     done;
+    let name = GI.Interface_info.cast_to_baseinfo j |> getOnlyName in
+    (name,
     { ifTypeInit = GI.Interface_info.cast_to_registeredtypeinfo j |> GI.Registered_type_info.get_type_init;
       ifCType = GI.Interface_info.cast_to_registeredtypeinfo j |> GI.Registered_type_info.get_type_name;
        ifPrerequisites = l_prerequisite;
@@ -50,7 +52,7 @@ let parseInterface j =
        ifSignals = l_signals;
        ifMethods = l_methods;
        ifDeprecated = GI.Interface_info.cast_to_baseinfo j |> GI.Base_info.is_deprecated;
-    }
+    })
 
 
 

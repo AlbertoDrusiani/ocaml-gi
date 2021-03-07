@@ -1,23 +1,25 @@
 module GI = GObject_introspection
 module B = Bindings
 
-type enumeration_member = 
-    { enumMemberName: string;
-      enumMemberValue: int64;
-     (* enumMemberCId: string;
-      enumMemberDoc: string; (*in haskell è Documentation*)*)
+open BasicTypes
+
+type enumeration_member = { 
+    enumMemberName: string;
+    enumMemberValue: int64;
+   (* enumMemberCId: string;
+    enumMemberDoc: string; (*in haskell è Documentation*)*)
     }
 
 
 
-type enumeration = 
-    { enumMembers: enumeration_member list ref; (*TODO da chiedere al prof*)
-      enumErrorDomain: string option;
-      enumTypeInit: string option;
-      (*enumDocumentation: string; (*in haskell è Documentation*)
-      enumCType: string; forse è la get_type_name in registered_info
-      enumStorageBytes: int;  c'è qualcosa, da guardare meglio*)
-      enumDeprecated: bool; (*in haskell è DeprecationInfo*)
+type enumeration = { 
+    enumMembers: enumeration_member list ref; (*TODO da chiedere al prof*)
+    enumErrorDomain: string option;
+    enumTypeInit: string option;
+    (*enumDocumentation: string; (*in haskell è Documentation*)
+    enumCType: string; forse è la get_type_name in registered_info
+    enumStorageBytes: int;  c'è qualcosa, da guardare meglio*)
+    enumDeprecated: bool; (*in haskell è DeprecationInfo*)
     }
 
 (*passo alla funzione una enum_info e l'indice corrispondente*)
@@ -41,6 +43,8 @@ let parseEnum e =
     for i = GI.Enum_info.get_n_methods e downto 0 do
         l := parseEnumMember e i :: !l
     done;
+    let name = GI.Enum_info.cast_to_baseinfo e |> getOnlyName in
+    (name,
     { enumMembers = l;
       enumErrorDomain = GI.Enum_info.get_error_domain e;
       enumTypeInit = GI.Enum_info.cast_to_registeredtypeinfo e |> GI.Registered_type_info.get_type_init;
@@ -48,5 +52,5 @@ let parseEnum e =
       enumCType = ;
       enumStorageBytes = ; *)
       enumDeprecated = GI.Enum_info.cast_to_baseinfo e |> GI.Base_info.is_deprecated;
-    }
+    })
 
