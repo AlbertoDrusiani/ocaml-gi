@@ -12,6 +12,7 @@ open GIR.Object
 open GIR.Struct
 open GIR.Union
 open GIR.APITypes
+open GIR.Flags
 
 type gir_info = {
     girPCPackages: string list;
@@ -64,7 +65,10 @@ let parseInfo namespace index =
                 match parseEnum @@ GI.Enum_info.cast_from_baseinfo info with
                 | (name, api) -> name, APIEnum api
               end
-    | Flags -> assert false (*all'interno di callable*)
+    | Flags -> begin
+                match parseFlags @@ GI.Enum_info.cast_from_baseinfo info with
+                | (name, api) -> name, APIFlags api
+                end
     | Object -> begin 
                     match parseObject @@ GI.Object_info.cast_from_baseinfo info with
                     | (name, api) -> name, APIObject api
@@ -109,7 +113,7 @@ let parseNamespace namespace =
 
 
 let run =
-    parseNamespace "Atk";;
+    parseNamespace "Gtk";;
 
 run;;
 
