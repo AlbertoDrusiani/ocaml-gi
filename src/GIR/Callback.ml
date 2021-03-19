@@ -1,15 +1,18 @@
 module GI = GObject_introspection
 
 open Callable
+open BasicTypes
 
 type callback = { 
-    cbCallback: callable;
+    cbCallable: callable;
    (* cbCType: string option;*)
    (* cbDocumentation: documentation;*)
     }
 
 
 let parseCallback c =
-    { cbCallback = parseCallable c;}
+    let name = GI.Callable_info.cast_to_baseinfo c |> getName in
+    (name, 
+    { cbCallable = parseCallable c;})
 
 

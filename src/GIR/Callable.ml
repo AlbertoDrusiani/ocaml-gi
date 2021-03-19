@@ -9,7 +9,7 @@ type callable ={
     returnMayBeNull: bool;
     returnTransfer: transfer;
    (* returnDocumentation: documentation;*)
-    args: arg list ref; (*TODO chiedere al prof*)
+    args: arg list ref;
     skipReturn: bool;
     callableThrows: bool;
     (*callableDeprecated: deprecation_info option;*)
@@ -29,7 +29,8 @@ let wrap_callable_return_type a =
 (*passo un Callable_info*)
 let parseCallable a =
     let l = ref [] in
-    for i = GI.Callable_info.get_n_args a downto 0 do
+    print_endline("Primo for callable");
+    for i = (GI.Callable_info.get_n_args a) - 1 downto 0 do
         l := (GI.Callable_info.get_arg a i |> parseArg) :: !l
     done;
     { returnType = wrap_callable_return_type a;

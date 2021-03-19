@@ -5,7 +5,7 @@ open Method
 open BasicTypes
 
 type union = {
-   (* unionIsBoxed: bool;*)
+   (* unionIsBoxed: bool;*) (*faccio come haskell*)
    (* unionAllocationInfo: allocation_info;*)
    (* unionDocumentation: documentation;*)
     unionSize: int; (*OK*)
@@ -19,12 +19,12 @@ type union = {
 (*passo un Union_info*)
 let parseUnion u =
    let l_fields = ref [] in
-    for i = GI.Union_info.get_n_fields u downto 0 do
+    for i = (GI.Union_info.get_n_fields u) - 1 downto 0 do
         l_fields := (GI.Union_info.get_field u i |> parseField) :: !l_fields
     done;
      
     let l_methods = ref [] in
-    for i = GI.Union_info.get_n_methods u downto 0 do
+    for i = (GI.Union_info.get_n_methods u) - 1 downto 0 do
         l_methods := (GI.Union_info.get_method u i |> parseMethod) :: !l_methods
     done;
     let name = GI.Union_info.cast_to_baseinfo u |> getName in

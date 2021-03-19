@@ -17,7 +17,7 @@ type scope =
 
 
 type arg = { 
-    argCName: string;
+    argCName: string option;
     argType: type_ml;
     direction: direction;
     mayBeNull: bool;
@@ -47,12 +47,8 @@ let parseDirection (d : B.Arg_info.direction) =
 
 (*passo un Arg_info*)
 let parseArg a =
-    let name =
-        match GI.Arg_info.cast_to_baseinfo a |> GI.Base_info.get_name with
-        | Some x -> x
-        | None -> "Errore"
-    in 
-    { argCName = name;
+    print_endline("Arg prima print");
+    { argCName = GI.Arg_info.cast_to_baseinfo a |> GI.Base_info.get_name;
       argType = GI.Arg_info.get_type a |> cast_to_type_ml;
      (* argDoc = ;*)
       direction = GI.Arg_info.get_direction a |> parseDirection;

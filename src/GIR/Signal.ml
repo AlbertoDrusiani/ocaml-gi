@@ -5,7 +5,7 @@ open Callable
 open BasicTypes
 
 type signal = { 
-    sigName: string;
+    sigName: string option;
     sigCallable: callable;
     sigDeprecated: bool;
      (* sigDetailed: bool;*)

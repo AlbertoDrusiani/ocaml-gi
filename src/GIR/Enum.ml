@@ -5,7 +5,7 @@ open BasicTypes
 
 type enumeration_member = { 
     enumMemberName: string;
-    enumMemberValue: int64;
+    enumMemberValue: int64 option;
    (* enumMemberCId: string;
     enumMemberDoc: string; (*in haskell è Documentation*)*)
     }
@@ -24,11 +24,11 @@ type enumeration = {
 
 (*passo alla funzione una enum_info e l'indice corrispondente*)
 let parseEnumMember e i =
-    let value = 
+    let value =
         match GI.Enum_info.get_value e i with
-        | Some x -> GI.Value_info.get_value x
-        | None -> 32L (*TODO sistemare errore con valore che abbia senso*)
-    in 
+        | Some x -> Some (GI.Value_info.get_value x)
+        | None -> None
+    in
     { enumMemberName = GI.Enum_info.get_method e i |> GI.Function_info.get_symbol;
       enumMemberValue = value;
       (*
@@ -40,10 +40,10 @@ let parseEnumMember e i =
 (*passo una enum_info*)
 let parseEnum e = 
     let l = ref [] in
-    for i = GI.Enum_info.get_n_methods e downto 0 do
+    for i = (GI.Enum_info.get_n_methods e) - 1 downto 0 do
         l := parseEnumMember e i :: !l
     done;
-    let name = GI.Enum_info.cast_to_baseinfo e |> getOnlyName in
+    let name = GI.Enum_info.cast_to_baseinfo e |> getName in
     (name,
     { enumMembers = l;
       enumErrorDomain = GI.Enum_info.get_error_domain e;

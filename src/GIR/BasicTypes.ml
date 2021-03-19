@@ -3,7 +3,7 @@ module B = Bindings
 
 type name = 
     { namespace : string;
-      name : string;
+      name : string option;
     }
 
 type transfer =
@@ -58,8 +58,9 @@ type type_ml =
 (*prendo un type_info*)
 let rec cast_to_type_ml a =
    (* let type_info = GI.Type_info.cast_from_baseinfo a in*)
+    print_endline("Cast prima print");
     match GI.Type_info.get_tag a with
-    | Void -> assert false
+    | Void -> TBasicType TBoolean (*TODO bacatoooooooO*)
     | Boolean -> TBasicType TBoolean
     | Int8 -> TBasicType TInt8
     | Uint8 -> TBasicType TUInt8
@@ -76,6 +77,7 @@ let rec cast_to_type_ml a =
     | Filename -> TBasicType TFileName
     | Array -> 
             begin
+            print_endline("Basic types Array");
             let array_type = GI.Type_info.get_array_type a in
             let array_param_type = GI.Type_info.get_param_type a in
             match array_type with
@@ -90,15 +92,13 @@ let rec cast_to_type_ml a =
             | None -> TError
             end
     | Interface ->
-            let name = 
-                match GI.Type_info.cast_to_baseinfo a |> GI.Base_info.get_name with
-                | Some x -> x
-                | None -> "Errore"
+            print_endline("Basic types Interface");
+            let name = GI.Type_info.cast_to_baseinfo a |> GI.Base_info.get_name
             in let namespace = GI.Type_info.cast_to_baseinfo a |> GI.Base_info.get_namespace in
             TInterface {name = name; namespace = namespace}
-    | GList -> TGList (cast_to_type_ml a)
-    | GSList -> TGSList (cast_to_type_ml a)
-    | GHash -> TGHash (cast_to_type_ml a, cast_to_type_ml a)
+    | GList -> print_endline("Basic types GList"); TGList (GI.Type_info.get_param_type a |> cast_to_type_ml)
+    | GSList -> print_endline("Basic type GSList"); TGSList (GI.Type_info.get_param_type a |> cast_to_type_ml)
+    | GHash -> print_endline("Basic types Ghash"); TGHash (GI.Type_info.unsafe_get_param_type a 0 |> cast_to_type_ml, GI.Type_info.unsafe_get_param_type a 1 |> cast_to_type_ml)
     | Error -> TError
     | Unichar -> TBasicType TUniChar
 
@@ -111,24 +111,17 @@ let parseTransfer (t : B.Arg_info.transfer) =
 
 (*prende un base_info*)
 let getName b =
-    {name =
-        begin 
-        match GI.Base_info.get_name b with 
-        | Some x -> x
-        | None -> "Error"
-        end;
+    {name =GI.Base_info.get_name b;
      namespace = GI.Base_info.get_namespace b;
     }
 
 (* prende un base_info*)    
 let getOnlyName b =
-    match GI.Base_info.get_name b with
-    | Some x -> x
-    | None -> "Error"
+    GI.Base_info.get_name b 
 
 
 
-let print_info ns =
+(*let print_info ns =
     let _ = Result.get_ok (GI.Repository.require ns ()) in
     for i=0 to GI.Repository.get_n_infos ns do
         let nome = match GI.Repository.get_info ns i |> GI.Base_info.get_name with
@@ -144,5 +137,5 @@ let print_info ns =
             print_endline "Non è un tipo"
     done
 
-let _ = print_info "Gtk"
+let _ = print_info "Gtk"*)
     

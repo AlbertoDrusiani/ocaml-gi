@@ -12,7 +12,7 @@ type property_flag =
 
 
 type property = { 
-    propName: string;
+    propName: string option;
     propType: type_ml;
     propFlags: property_flag list;
    (* propReadNullable: bool option;

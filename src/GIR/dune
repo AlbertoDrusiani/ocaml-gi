@@ -1,5 +1,6 @@
-(executable
-  (name Object)
+(library
+  (name GIR)
+  (public_name GIR)
   (libraries gobject-introspection)
 )
 

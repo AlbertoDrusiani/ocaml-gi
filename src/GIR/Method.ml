@@ -30,14 +30,10 @@ let parseMethodType (l : B.Function_info.flags) =
 (*passo un Method_info*)    
 let parseMethod m =
     let method_name = 
-        { name = 
-            begin
-            match GI.Function_info.cast_to_baseinfo m |> GI.Base_info.get_name with
-            | Some x -> x
-            | None -> "Error"
-            end;
+        { name = GI.Function_info.cast_to_baseinfo m |> GI.Base_info.get_name;
           namespace = GI.Function_info.cast_to_baseinfo m |> GI.Base_info.get_namespace;
         } in
+    print_endline("Dentro a parseMethod");
     { methodName = method_name;
       methodSymbol = GI.Function_info.get_symbol m;
      (* methodType = GI.Function_info.*)
