@@ -39,6 +39,7 @@ let parseEnumMember e i =
 
 (*passo una enum_info*)
 let parseEnum e = 
+    print_endline("ppppppppppp ENUM pppppppppppp");
     let l = ref [] in
     for i = (GI.Enum_info.get_n_methods e) - 1 downto 0 do
         l := parseEnumMember e i :: !l

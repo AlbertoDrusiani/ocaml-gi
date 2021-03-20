@@ -11,7 +11,7 @@ type field_info_flag =
 type field =
     { fieldName: string;
      (* fieldVisible: bool;*)
-      fieldType: type_ml;
+      fieldType: type_ml option;
       fieldIsPointer: bool; (*in haskell è un bool option*)
      (* fieldCallback: callback option;*)
       fieldOffset: int;
@@ -32,6 +32,7 @@ let rec parseFlags (f : B.Field_info.flags list)  =
 
 (*passo un Field_info*)
 let parseField f =
+    print_endline("ppppppppppppp FIELD pppppppppp");
     let name = 
         match GI.Field_info.cast_to_baseinfo f |> GI.Base_info.get_name with
         | Some x -> x

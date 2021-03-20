@@ -18,7 +18,7 @@ type scope =
 
 type arg = { 
     argCName: string option;
-    argType: type_ml;
+    argType: type_ml option;
     direction: direction;
     mayBeNull: bool;
    (* argDoc: string;*) (*in haskell Documentation*)
@@ -47,7 +47,7 @@ let parseDirection (d : B.Arg_info.direction) =
 
 (*passo un Arg_info*)
 let parseArg a =
-    print_endline("Arg prima print");
+    print_endline("ppppppppppp ARG ppppppppppppp");
     { argCName = GI.Arg_info.cast_to_baseinfo a |> GI.Base_info.get_name;
       argType = GI.Arg_info.get_type a |> cast_to_type_ml;
      (* argDoc = ;*)

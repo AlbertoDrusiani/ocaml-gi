@@ -42,7 +42,7 @@ type gir_info_parse = {
 let parseInfo namespace index =
     let info = GI.Repository.get_info namespace index in
     let info_type = GI.Base_info.get_type info in
-    print_endline(B.Base_info.string_of_info_type info_type);
+    print_endline("_________"^B.Base_info.string_of_info_type info_type);
     let name, api = match info_type with
     | Invalid -> assert false
     | Function -> 
@@ -71,7 +71,7 @@ let parseInfo namespace index =
                 end
     | Object -> begin 
                     match parseObject @@ GI.Object_info.cast_from_baseinfo info with
-                    | (name, api) -> name, APIObject api
+                    | (name, api) -> print_endline("SUKASUKAVECKIO"); name, APIObject api
                 end
     | Interface -> begin 
                         match parseInterface @@ GI.Interface_info.cast_from_baseinfo info with
@@ -97,13 +97,15 @@ let parseInfo namespace index =
     | Unresolved -> assert false
     in name, api
 
+(*al posto di un girInfo restituisco direttamente un girnamespace*)    
 let parseNamespace namespace =
+    print_endline("####################" ^ namespace ^ "####################");
     let _ = Result.get_ok (GI.Repository.require namespace()) in
     let version = GI.Repository.get_version namespace in
     let name = namespace in
     let n_apis = ref [] in
     for i = 0 to (GI.Repository.get_n_infos namespace) - 1  do
-        n_apis := parseInfo namespace i :: !n_apis; 
+        n_apis := parseInfo namespace i :: !n_apis;
     done;
     { 
       nsName = name;
@@ -111,9 +113,18 @@ let parseNamespace namespace =
       nsAPIs = n_apis;
     }
 
+let loadGirInfo namespace =
+    let lib = parseNamespace namespace in
+    let dep_list_not_splitted = GI.Repository.get_dependencies namespace in
+    let dep_list_splitted = List.map (String.split_on_char '-') dep_list_not_splitted in
+    let dep_list = List.map List.hd dep_list_splitted in
+    let dep = List.map parseNamespace dep_list in
+    (lib, dep)
+
+
 
 let run =
-    parseNamespace "Gtk";;
+    parseNamespace "GObject";;
 
 run;;
 

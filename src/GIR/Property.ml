@@ -13,7 +13,7 @@ type property_flag =
 
 type property = { 
     propName: string option;
-    propType: type_ml;
+    propType: type_ml option;
     propFlags: property_flag list;
    (* propReadNullable: bool option;
     propWriteNullable: bool option;*)
@@ -40,6 +40,7 @@ let rec parsePropertyFlag a =
 
 (*passo una Property_info*)
 let parseProperty a =
+    print_endline("ppppppppp PROPERTY ppppppppp");
     let name =  GI.Property_info.cast_to_baseinfo a |> getOnlyName in
     { 
         propName = name;

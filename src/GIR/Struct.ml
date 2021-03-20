@@ -21,19 +21,20 @@ type struct_ml = {
 
 (*passo una Struct_info*)
 let parseStruct s =
+    print_endline("pppppppppp STRUCT ppppppppppp");
     let l_fields = ref [] in
-    print_endline("Primo for");
+   (*print_endline("Primo for");*)
     for i = (GI.Struct_info.get_n_fields s) - 1 downto 0 do
         l_fields := (GI.Struct_info.get_field s i |> parseField) :: !l_fields
     done;
      
     let l_methods = ref [] in
-    print_endline("Secondo_for");
+    (*print_endline("Secondo_for");*)
     for i = (GI.Struct_info.get_n_methods s) - 1 downto 0 do
         l_methods := (GI.Struct_info.get_method s i |> parseMethod) :: !l_methods
     done;
-    let name = GI.Struct_info.to_baseinfo s |> getName in
-    print_endline("Terzo for");
+    let name = GI.Struct_info.cast_to_registeredtypeinfo s |> GI.Registered_type_info.cast_to_baseinfo |> getName in
+    (*print_endline("Terzo for");*)
     (name,
     {
         structTypeInit = GI.Struct_info.cast_to_registeredtypeinfo s |> GI.Registered_type_info.get_type_init;
@@ -41,7 +42,7 @@ let parseStruct s =
         structSize = GI.Struct_info.get_size s;
         structFields = l_fields;
         structMethods = l_methods;
-        structDeprecated = GI.Struct_info.to_baseinfo s |> GI.Base_info.is_deprecated;
+        structDeprecated = GI.Struct_info.cast_to_registeredtypeinfo s |> GI.Registered_type_info.cast_to_baseinfo |> GI.Base_info.is_deprecated;
     })
 
     

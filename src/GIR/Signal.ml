@@ -14,6 +14,7 @@ type signal = {
 
 (*passo un signal_info*)
 let parseSignal s =
+    print_endline("pppppppppppp SIGNAL pppppppppp");
     let name =  GI.Signal_info.cast_to_baseinfo s |> getOnlyName in
     { 
         sigName = name;

@@ -18,6 +18,7 @@ type union = {
 
 (*passo un Union_info*)
 let parseUnion u =
+   print_endline("pppppppppppp UNION ppppppppppp");
    let l_fields = ref [] in
     for i = (GI.Union_info.get_n_fields u) - 1 downto 0 do
         l_fields := (GI.Union_info.get_field u i |> parseField) :: !l_fields

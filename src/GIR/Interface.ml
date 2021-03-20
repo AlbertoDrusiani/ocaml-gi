@@ -25,6 +25,7 @@ let parsePrerequisite p =
              
  
 let parseInterface j =
+    print_endline("pppppppppp INTERFACE pppppppppppp");
     let l_prerequisite = ref [] in
     for i = (GI.Interface_info.get_n_prerequisites j) - 1 downto 0 do
         l_prerequisite := (GI.Interface_info.get_prerequisite j i |> parsePrerequisite) :: !l_prerequisite

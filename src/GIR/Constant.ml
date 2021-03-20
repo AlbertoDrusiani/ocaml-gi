@@ -8,7 +8,7 @@ module B = Bindings
 
 (*da sistemare i due campi mancanti e value in stringa *)
 type constant = { 
-    constantType: type_ml;
+    constantType: type_ml option;
     constantValue: GI.Types.argument_t Ctypes.union Ctypes.ptr;
    (*constantCType: string;
     constantDocumentation: string;*)
@@ -18,6 +18,7 @@ type constant = {
 
 (*passo alla funzione la constant_info da fuori perché sto già facendo pattern matching*)
 let parseConstant constant_info = 
+    print_endline("pppppppppppp CONSTANT ppppppppppp");
     let name = GI.Constant_info.cast_to_baseinfo constant_info |> getName in
     (name,
     { constantValue = GI.Constant_info.get_value constant_info;
