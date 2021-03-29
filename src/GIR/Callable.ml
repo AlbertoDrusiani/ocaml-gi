@@ -29,10 +29,11 @@ let wrap_callable_return_type a =
 (*passo un Callable_info*)
 let parseCallable a =
     let l = ref [] in
-    print_endline("ppppppppp CALLABLE pppppppppppp");
+    prerr_endline("ppppppppp CALLABLE pppppppppppp");
     for i = (GI.Callable_info.get_n_args a) - 1 downto 0 do
         l := (GI.Callable_info.get_arg a i |> parseArg) :: !l
     done;
+    prerr_endline("FINE FOR ARGS CALLABLE");
     { returnType = GI.Callable_info.get_return_type a |> cast_to_type_ml;
       returnMayBeNull = GI.Callable_info.may_return_null a;
       returnTransfer = GI.Callable_info.get_caller_owns a |> parseTransfer;

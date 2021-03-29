@@ -25,7 +25,7 @@ let parsePrerequisite p =
              
  
 let parseInterface j =
-    print_endline("pppppppppp INTERFACE pppppppppppp");
+    prerr_endline("pppppppppp INTERFACE pppppppppppp");
     let l_prerequisite = ref [] in
     for i = (GI.Interface_info.get_n_prerequisites j) - 1 downto 0 do
         l_prerequisite := (GI.Interface_info.get_prerequisite j i |> parsePrerequisite) :: !l_prerequisite
@@ -42,15 +42,15 @@ let parseInterface j =
     for i = (GI.Interface_info.get_n_methods j) - 1 downto 0 do
         l_methods := (GI.Interface_info.get_method j i |> parseMethod) :: !l_methods
     done;
-    let name = GI.Interface_info.cast_to_baseinfo j |> getName in
+    let name = GI.Interface_info.to_baseinfo j |> getName in
     (name,
-    { ifTypeInit = GI.Interface_info.cast_to_registeredtypeinfo j |> GI.Registered_type_info.get_type_init;
-      ifCType = GI.Interface_info.cast_to_registeredtypeinfo j |> GI.Registered_type_info.get_type_name;
+    { ifTypeInit = GI.Interface_info.to_registeredtypeinfo j |> GI.Registered_type_info.get_type_init;
+      ifCType = GI.Interface_info.to_registeredtypeinfo j |> GI.Registered_type_info.get_type_name;
        ifPrerequisites = l_prerequisite;
        ifProperties = l_properties;
        ifSignals = l_signals;
        ifMethods = l_methods;
-       ifDeprecated = GI.Interface_info.cast_to_baseinfo j |> GI.Base_info.is_deprecated;
+       ifDeprecated = GI.Interface_info.to_baseinfo j |> GI.Base_info.is_deprecated;
     })
 
 

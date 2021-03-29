@@ -32,9 +32,9 @@ let rec parseFlags (f : B.Field_info.flags list)  =
 
 (*passo un Field_info*)
 let parseField f =
-    print_endline("ppppppppppppp FIELD pppppppppp");
+    prerr_endline("ppppppppppppp FIELD pppppppppp");
     let name = 
-        match GI.Field_info.cast_to_baseinfo f |> GI.Base_info.get_name with
+        match GI.Field_info.to_baseinfo f |> GI.Base_info.get_name with
         | Some x -> x
         | None -> "Error"
     in

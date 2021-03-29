@@ -54,6 +54,15 @@ let splitOn x xs =
 
 (*let utf8ReadFile fname =*)
 
+(*mappa solo gli ultimi n elementi di una funzione*)
+let rec mapNth n fn l =
+    match n, fn, l with
+    | _, _, [] -> []
+    | n, fn, x::xs when n == 0 -> fn x :: xs
+    | n, fn, x::xs -> x :: mapNth (n-1) fn xs
+
+
+
 let range a b =
     List.init (b-a) ((+) a)
 

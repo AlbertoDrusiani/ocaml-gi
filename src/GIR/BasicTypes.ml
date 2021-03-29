@@ -57,8 +57,7 @@ type type_ml =
 
 (*prendo un type_info*)
 let rec cast_to_type_ml a =
-   (* let type_info = GI.Type_info.cast_from_baseinfo a in*)
-    print_endline("Basic types: "^(GI.Type_info.get_tag a |> B.Types.string_of_tag));
+    prerr_endline("Basic types: "^(GI.Type_info.get_tag a |> B.Types.string_of_tag));
     match GI.Type_info.get_tag a with
     | Void -> None
     | Boolean -> Some (TBasicType TBoolean)
@@ -92,8 +91,8 @@ let rec cast_to_type_ml a =
             | None -> Some TError
             end
     | Interface ->
-            let name = GI.Type_info.cast_to_baseinfo a |> GI.Base_info.get_name in
-            let namespace = GI.Type_info.cast_to_baseinfo a |> GI.Base_info.get_namespace in
+            let name = GI.Type_info.to_baseinfo a |> GI.Base_info.get_name in
+            let namespace = GI.Type_info.to_baseinfo a |> GI.Base_info.get_namespace in
             Some (TInterface {name = name; namespace = namespace;})
     | GList ->  Some (TGList (GI.Type_info.get_param_type a |> cast_to_type_ml))
     | GSList -> Some (TGSList (GI.Type_info.get_param_type a |> cast_to_type_ml))
@@ -119,22 +118,3 @@ let getOnlyName b =
     GI.Base_info.get_name b 
 
 
-
-(*let print_info ns =
-    let _ = Result.get_ok (GI.Repository.require ns ()) in
-    for i=0 to GI.Repository.get_n_infos ns do
-        let nome = match GI.Repository.get_info ns i |> GI.Base_info.get_name with
-            | Some a -> a
-            | None -> "Errore"
-        in print_endline ("Nome: " ^ nome);
-        let tipo = GI.Repository.get_info ns i |> GI.Base_info.get_type |> B.Base_info.string_of_info_type in
-        print_endline ("Tipo: " ^ tipo);
-        if GI.Repository.get_info ns i |> GI.Base_info.get_type == Type then
-            let tag = GI.Repository.get_info ns i |> GI.Type_info.cast_from_baseinfo |> GI.Type_info.get_tag |> B.Types.string_of_tag in
-            print_endline ("Tag: " ^ tag)
-        else
-            print_endline "Non è un tipo"
-    done
-
-let _ = print_info "Gtk"*)
-    

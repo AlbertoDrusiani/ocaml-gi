@@ -47,8 +47,8 @@ let parseDirection (d : B.Arg_info.direction) =
 
 (*passo un Arg_info*)
 let parseArg a =
-    print_endline("ppppppppppp ARG ppppppppppppp");
-    { argCName = GI.Arg_info.cast_to_baseinfo a |> GI.Base_info.get_name;
+    prerr_endline("ppppppppppp ARG ppppppppppppp");
+    { argCName = GI.Arg_info.to_baseinfo a |> GI.Base_info.get_name;
       argType = GI.Arg_info.get_type a |> cast_to_type_ml;
      (* argDoc = ;*)
       direction = GI.Arg_info.get_direction a |> parseDirection;

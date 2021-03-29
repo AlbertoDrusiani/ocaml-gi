@@ -40,8 +40,8 @@ let rec parsePropertyFlag a =
 
 (*passo una Property_info*)
 let parseProperty a =
-    print_endline("ppppppppp PROPERTY ppppppppp");
-    let name =  GI.Property_info.cast_to_baseinfo a |> getOnlyName in
+    prerr_endline("ppppppppp PROPERTY ppppppppp");
+    let name =  GI.Property_info.to_baseinfo a |> getOnlyName in
     { 
         propName = name;
         propType = GI.Property_info.get_type a |> cast_to_type_ml;
@@ -49,6 +49,6 @@ let parseProperty a =
         (* propReadNullable = ;
          propWriteNullable = ;*)
          propTransfer = GI.Property_info.get_ownership_transfer a |> parseTransfer;
-         propDeprecated = GI.Property_info.cast_to_baseinfo a |> GI.Base_info.is_deprecated;
+         propDeprecated = GI.Property_info.to_baseinfo a |> GI.Base_info.is_deprecated;
     }
         

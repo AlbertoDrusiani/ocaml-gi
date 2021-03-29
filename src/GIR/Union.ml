@@ -18,7 +18,7 @@ type union = {
 
 (*passo un Union_info*)
 let parseUnion u =
-   print_endline("pppppppppppp UNION ppppppppppp");
+   prerr_endline("pppppppppppp UNION ppppppppppp");
    let l_fields = ref [] in
     for i = (GI.Union_info.get_n_fields u) - 1 downto 0 do
         l_fields := (GI.Union_info.get_field u i |> parseField) :: !l_fields
@@ -28,13 +28,13 @@ let parseUnion u =
     for i = (GI.Union_info.get_n_methods u) - 1 downto 0 do
         l_methods := (GI.Union_info.get_method u i |> parseMethod) :: !l_methods
     done;
-    let name = GI.Union_info.cast_to_baseinfo u |> getName in
+    let name = GI.Union_info.to_baseinfo u |> getName in
     (name,
     {
         unionSize = GI.Union_info.get_size u;
-        unionTypeInit = GI.Union_info.cast_to_registeredtypeinfo u |> GI.Registered_type_info.get_type_init;
+        unionTypeInit = GI.Union_info.to_registeredtypeinfo u |> GI.Registered_type_info.get_type_init;
         unionFields = l_fields;
         unionMethods = l_methods;
-        unionCType = GI.Union_info.cast_to_registeredtypeinfo u |> GI.Registered_type_info.get_type_name;
-        unionDeprecated = GI.Union_info.cast_to_baseinfo u |> GI.Base_info.is_deprecated;
+        unionCType = GI.Union_info.to_registeredtypeinfo u |> GI.Registered_type_info.get_type_name;
+        unionDeprecated = GI.Union_info.to_baseinfo u |> GI.Base_info.is_deprecated;
     })

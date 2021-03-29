@@ -39,19 +39,19 @@ let parseEnumMember e i =
 
 (*passo una enum_info*)
 let parseEnum e = 
-    print_endline("ppppppppppp ENUM pppppppppppp");
+    prerr_endline("ppppppppppp ENUM pppppppppppp");
     let l = ref [] in
     for i = (GI.Enum_info.get_n_methods e) - 1 downto 0 do
         l := parseEnumMember e i :: !l
     done;
-    let name = GI.Enum_info.cast_to_baseinfo e |> getName in
+    let name = GI.Enum_info.to_baseinfo e |> getName in
     (name,
     { enumMembers = l;
       enumErrorDomain = GI.Enum_info.get_error_domain e;
-      enumTypeInit = GI.Enum_info.cast_to_registeredtypeinfo e |> GI.Registered_type_info.get_type_init;
+      enumTypeInit = GI.Enum_info.to_registeredtypeinfo e |> GI.Registered_type_info.get_type_init;
      (* enumDocumentation = ;
       enumCType = ;
       enumStorageBytes = ; *)
-      enumDeprecated = GI.Enum_info.cast_to_baseinfo e |> GI.Base_info.is_deprecated;
+      enumDeprecated = GI.Enum_info.to_baseinfo e |> GI.Base_info.is_deprecated;
     })
 

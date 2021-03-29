@@ -14,6 +14,9 @@ open GIR.Union
 open GIR.APITypes
 open GIR.Flags
 
+
+
+
 type gir_info = {
     girPCPackages: string list;
     girNSName: string;
@@ -47,12 +50,12 @@ let parseInfo namespace index =
     | Invalid -> assert false
     | Function -> 
             begin 
-                match parseFunction @@ GI.Function_info.cast_from_baseinfo info with
+                match parseFunction @@ GI.Function_info.from_baseinfo info with
                  | (name, api) -> name, APIFunction api
             end
     | Callback -> 
             begin
-                match parseCallback @@ GI.Callable_info.cast_from_baseinfo info with
+                match parseCallback @@ GI.Callable_info.from_baseinfo info with
                 | (name, api) -> name, APICallback api
             end
     | Struct -> 
@@ -62,29 +65,29 @@ let parseInfo namespace index =
             end
     | Boxed -> assert false
     | Enum -> begin 
-                match parseEnum @@ GI.Enum_info.cast_from_baseinfo info with
+                match parseEnum @@ GI.Enum_info.from_baseinfo info with
                 | (name, api) -> name, APIEnum api
               end
     | Flags -> begin
-                match parseFlags @@ GI.Enum_info.cast_from_baseinfo info with
+                match parseFlags @@ GI.Enum_info.from_baseinfo info with
                 | (name, api) -> name, APIFlags api
                 end
     | Object -> begin 
-                    match parseObject @@ GI.Object_info.cast_from_baseinfo info with
-                    | (name, api) -> print_endline("SUKASUKAVECKIO"); name, APIObject api
+                    match parseObject @@ GI.Object_info.from_baseinfo info with
+                    | (name, api) -> name, APIObject api
                 end
     | Interface -> begin 
-                        match parseInterface @@ GI.Interface_info.cast_from_baseinfo info with
+                        match parseInterface @@ GI.Interface_info.from_baseinfo info with
                         | (name, api) -> name, APIInterface api
                    end
     | Constant -> begin
-                        match parseConstant @@ GI.Constant_info.cast_from_baseinfo info with
+                        match parseConstant @@ GI.Constant_info.from_baseinfo info with
                         | (name, api) -> name, APIConst api
                   end
 
     | Invalid_0 -> assert false
     | Union -> begin 
-                 match parseUnion @@ GI.Union_info.cast_from_baseinfo info with
+                 match parseUnion @@ GI.Union_info.from_baseinfo info with
                  | (name, api) -> name, APIUnion api
                end
     | Value -> assert false (*dentro ad enum*)
@@ -99,6 +102,7 @@ let parseInfo namespace index =
 
 (*al posto di un girInfo restituisco direttamente un girnamespace*)    
 let parseNamespace namespace =
+    Gc.set { (Gc.get()) with Gc.verbose = 0x00d };
     print_endline("####################" ^ namespace ^ "####################");
     let _ = Result.get_ok (GI.Repository.require namespace()) in
     let version = GI.Repository.get_version namespace in
@@ -113,6 +117,7 @@ let parseNamespace namespace =
       nsAPIs = n_apis;
     }
 
+(*restituisce una (GIRInfo, [GIRInfo])*)    
 let loadGirInfo namespace =
     let lib = parseNamespace namespace in
     let dep_list_not_splitted = GI.Repository.get_dependencies namespace in

@@ -29,13 +29,13 @@ let parseMethodType (l : B.Function_info.flags) =
 
 (*passo un Method_info*)    
 let parseMethod m =
-    print_endline("pppppppppppp METHOD pppppppppp");
+    prerr_endline("pppppppppppp METHOD pppppppppp");
     let method_name = 
-        { name = GI.Function_info.cast_to_baseinfo m |> GI.Base_info.get_name;
-          namespace = GI.Function_info.cast_to_baseinfo m |> GI.Base_info.get_namespace;
+        { name = GI.Function_info.to_baseinfo m |> GI.Base_info.get_name;
+          namespace = GI.Function_info.to_baseinfo m |> GI.Base_info.get_namespace;
         } in
     { methodName = method_name;
       methodSymbol = GI.Function_info.get_symbol m;
      (* methodType = GI.Function_info.*)
-      methodCallable = GI.Function_info.cast_to_callableinfo m |> parseCallable;
+      methodCallable = GI.Function_info.to_callableinfo m |> parseCallable;
     }
