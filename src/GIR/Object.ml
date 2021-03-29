@@ -53,10 +53,10 @@ let parseObject o =
     prerr_endline("-_-_-_-_-_ FINEEEEEEEEEEEEEEE FOR OBJECT_-_-_-_-_-_-_");
     let name = GI.Object_info.to_baseinfo o |> getName in
     prerr_endline("PRIMA DELLA RIGA");
-    let _ = GI.Object_info.get_parent o in
+    (*let _ = GI.Object_info.get_parent o in*)
     prerr_endline("DOPO LA RIGA");
     (name,
-    { objParent = (*GI.Object_info.get_parent o |> getName*) {name = Some "prova"; namespace = "prova";}; (*TODO la parte commentata da "segmentation fault" non capisco perché*)
+    { objParent = GI.Object_info.get_parent o |> getName (*{name = Some "foo"; namespace = "foo";}*); (*TODO this line trigger the segfault*)
       objTypeInit = GI.Object_info.get_type_init o;
       objTypeName = GI.Object_info.get_type_name o;
       objCType = GI.Object_info.to_registeredtypeinfo o |> GI.Registered_type_info.get_type_name;

@@ -129,7 +129,7 @@ let loadGirInfo namespace =
 
 
 let run =
-    parseNamespace "GObject";;
+    loadGirInfo "Gio";;
 
 run;;
 
