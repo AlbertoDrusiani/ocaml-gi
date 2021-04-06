@@ -1,4 +1,4 @@
-module GI = GObject_introspection
+(*module GI = GObject_introspection
 
 open Callable
 open BasicTypes
@@ -18,4 +18,4 @@ let parseFunction f =
       fnCallable = GI.Function_info.to_callableinfo f |> parseCallable
     })
       
-
+*)

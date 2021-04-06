@@ -1,4 +1,4 @@
-module GI = GObject_introspection
+(*module GI = GObject_introspection
 module B = Bindings
 
 open BasicTypes
@@ -58,4 +58,4 @@ let parseArg a =
       argDestroy = GI.Arg_info.get_destroy a;
       argCallerAllocates = GI.Arg_info.is_caller_allocates a;
       transfer = GI.Arg_info.get_ownership_transfer a |> parseTransfer;
-    }
+    }*)

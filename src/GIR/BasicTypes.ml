@@ -1,5 +1,3 @@
-module GI = GObject_introspection
-module B = Bindings
 
 type name = 
     { namespace : string;
@@ -45,18 +43,18 @@ type type_ml =
     | TVariant
     | TGValue
     | TParamSpec
-    | TCArray of bool * int * int * type_ml option
-    | TGArray of type_ml option
-    | TPtrArray of type_ml option
+    | TCArray of bool * int * int * type_ml
+    | TGArray of type_ml
+    | TPtrArray of type_ml
     | TByteArray
-    | TGList of type_ml option
-    | TGSList of type_ml option
-    | TGHash of type_ml option * type_ml option
+    | TGList of type_ml
+    | TGSList of type_ml
+    | TGHash of type_ml * type_ml
     | TGClosure of (type_ml option)
     | TInterface of name
 
 (*prendo un type_info*)
-let rec cast_to_type_ml a =
+(*let rec cast_to_type_ml a =
     prerr_endline("Basic types: "^(GI.Type_info.get_tag a |> B.Types.string_of_tag));
     match GI.Type_info.get_tag a with
     | Void -> None
@@ -117,4 +115,4 @@ let getName b =
 let getOnlyName b =
     GI.Base_info.get_name b 
 
-
+*)

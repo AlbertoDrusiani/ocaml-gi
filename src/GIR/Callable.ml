@@ -1,4 +1,4 @@
-module GI = GObject_introspection
+(*module GI = GObject_introspection
 module B = Bindings
 
 open Arg
@@ -40,4 +40,4 @@ let parseCallable a =
       args = l;
       skipReturn = GI.Callable_info.skip_return a;
       callableThrows = GI.Callable_info.can_throw_gerror a; 
-    }
+    }*)

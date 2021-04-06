@@ -1,4 +1,4 @@
-module GI = GObject_introspection
+(*module GI = GObject_introspection
 module B = Bindings
 
 open BasicTypes
@@ -51,4 +51,4 @@ let parseProperty a =
          propTransfer = GI.Property_info.get_ownership_transfer a |> parseTransfer;
          propDeprecated = GI.Property_info.to_baseinfo a |> GI.Base_info.is_deprecated;
     }
-        
+       *) 

@@ -1,4 +1,4 @@
-module GI = GObject_introspection
+(*module GI = GObject_introspection
 module B = Bindings
 
 open BasicTypes
@@ -54,4 +54,4 @@ let parseEnum e =
       enumStorageBytes = ; *)
       enumDeprecated = GI.Enum_info.to_baseinfo e |> GI.Base_info.is_deprecated;
     })
-
+*)

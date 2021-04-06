@@ -1,4 +1,4 @@
-
+(*
 open BasicTypes
 
 (*open GObject_introspection*)
@@ -24,4 +24,4 @@ let parseConstant constant_info =
     { constantValue = GI.Constant_info.get_value constant_info;
       constantType = GI.Constant_info.get_type constant_info |> cast_to_type_ml;
       constantIsDeprecated = GI.Constant_info.to_baseinfo constant_info |> GI.Base_info.is_deprecated;
-    })
+    })*)

@@ -1,4 +1,4 @@
-module GI = GObject_introspection
+(*module GI = GObject_introspection
 
 open BasicTypes
 open Method
@@ -52,7 +52,7 @@ let parseInterface j =
        ifMethods = l_methods;
        ifDeprecated = GI.Interface_info.to_baseinfo j |> GI.Base_info.is_deprecated;
     })
-
+*)
 
 
 

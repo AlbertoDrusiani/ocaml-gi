@@ -1,4 +1,4 @@
-module GI = GObject_introspection
+(*module GI = GObject_introspection
 
 open Callable
 open BasicTypes
@@ -16,4 +16,4 @@ let parseCallback c =
     (name, 
     { cbCallable = parseCallable c;})
 
-
+*)

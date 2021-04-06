@@ -1,4 +1,4 @@
-module GI = GObject_introspection
+(*module GI = GObject_introspection
 
 open Field
 open Method
@@ -37,4 +37,4 @@ let parseUnion u =
         unionMethods = l_methods;
         unionCType = GI.Union_info.to_registeredtypeinfo u |> GI.Registered_type_info.get_type_name;
         unionDeprecated = GI.Union_info.to_baseinfo u |> GI.Base_info.is_deprecated;
-    })
+    })*)

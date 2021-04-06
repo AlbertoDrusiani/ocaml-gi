@@ -1,4 +1,4 @@
-module GI = GObject_introspection
+(*module GI = GObject_introspection
 
 
 open Callable
@@ -20,4 +20,4 @@ let parseSignal s =
         sigName = name;
         sigCallable = GI.Signal_info.to_callableinfo s |> parseCallable;
         sigDeprecated = GI.Signal_info.to_baseinfo s |> GI.Base_info.is_deprecated;
-    }
+    }*)

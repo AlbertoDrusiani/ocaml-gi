@@ -1,4 +1,4 @@
-module GI = GObject_introspection
+(*module GI = GObject_introspection
 module B = Bindings
 
 open BasicTypes
@@ -43,4 +43,4 @@ let parseField f =
       fieldIsPointer = GI.Field_info.get_type f |> GI.Type_info.is_pointer;
       fieldOffset = GI.Field_info.get_offset f;
       fieldFlags = GI.Field_info.get_flags f |> parseFlags;
-    }
+    }*)

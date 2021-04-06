@@ -1,4 +1,4 @@
-module GI = GObject_introspection
+(*module GI = GObject_introspection
 module B = Bindings
 
 open BasicTypes
@@ -38,4 +38,4 @@ let parseMethod m =
       methodSymbol = GI.Function_info.get_symbol m;
      (* methodType = GI.Function_info.*)
       methodCallable = GI.Function_info.to_callableinfo m |> parseCallable;
-    }
+    }*)

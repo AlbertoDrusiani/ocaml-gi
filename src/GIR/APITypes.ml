@@ -1,4 +1,4 @@
-open Constant
+(*open Constant
 open Function
 open Callback
 open Enum
@@ -18,4 +18,4 @@ type api =
     | APIObject of object_ml
     | APIStruct of struct_ml
     | APIUnion of union
-
+*)

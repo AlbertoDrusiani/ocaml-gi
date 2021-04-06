@@ -1,4 +1,4 @@
-module GI = GObject_introspection
+(*module GI = GObject_introspection
 
 open BasicTypes
 open Method
@@ -87,4 +87,4 @@ let parseObject o =
     })*)
     
 
-
+*)

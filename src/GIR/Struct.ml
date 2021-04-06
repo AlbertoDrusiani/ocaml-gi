@@ -1,4 +1,4 @@
-module GI = GObject_introspection
+(*module GI = GObject_introspection
 
 open Field
 open Method
@@ -44,5 +44,5 @@ let parseStruct s =
         structMethods = l_methods;
         structDeprecated = GI.Struct_info.to_baseinfo s |> GI.Base_info.is_deprecated;
     })
-
+*)
     
