@@ -14,10 +14,10 @@ type alias = name
 
 type basic_type =
     | TBoolean
-    | Tint
+    | TInt
     | TUInt
     | TLong
-    | TUlong
+    | TULong
     | TInt8
     | TUInt8
     | TInt16

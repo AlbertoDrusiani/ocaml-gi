@@ -1,5 +1,5 @@
 open BasicTypes
-open CTypes
+open Ctypes
 open Parser
 
 (* string -> basic_type option *)
@@ -25,7 +25,7 @@ let nameToBasicType str =
     | "gunichar" -> Some TUniChar
     | "GType" -> Some TGType
     | "utf8" -> Some TUTF8
-    | "filename" -> Some TFilenName
+    | "filename" -> Some TFileName
     | "gintptr" -> Some TIntPtr
     | "guintptr" -> Some TUIntPtr
     | "gshort" -> 
@@ -61,71 +61,6 @@ let nameToBasicType str =
     | _ -> None
     
 
-let queryType typ ns =
-    match parseTypeElements typ ns with
-    | [Some e] -> Some e
-    | [] -> None (*TODO* in Haksell [] cosa significa? *)
-    | [None] -> assert false
-
-
-let parseHashTable typ ns =
-    match parseTypeElements typ ns with
-    | [Some key, Some value] -> TGHash (key value)
-    | _ -> assert false
-
-
-let parseTypeName typename typ ns =
-    match nameToBasicType typename with
-    | Some b -> TBasicType b
-    | None -> match String.split_on_char '.' typename with
-              | ns::n -> parseFundamentalType ns n
-              | n::[] -> parseFundamentalType ns n
-              | _ -> assert false
-
-let parseClosure typ ns =
-    match queryAttr "closure-type" typ with
-    | Some t -> TGClosure (Some (parseTypeName t typ ns))
-    | None -> TGClosure None
-
-let parseListType typ ns = 
-    match queryType typ ns with
-    | Some t -> t
-    | None -> TBasicType TPtr
-
-
-let parseFundamentalType str1 str2 typ ns =
-    match str1, str2 with
-    | "GLib", "List" -> TGList (parseListType typ ns)
-    | "GLib", "SList" -> TGSList (parseListType typ ns)
-    | "GLib", "HashTable" -> parseHashTable typ ns
-    | "GLib", "Error" -> TError
-    | "GLib", "Variant" -> TVariant
-    | "GObject", "ParamSpec" -> TParamSpec
-    | "GObject", "Value" -> TGValue
-    | "GObject", "Closure" -> parseClosure typ ns
-    | ns, n -> assert false (*TODO resolveQualifiedTypeName {namespace = ns; name = n}*)
-
-let parseTypeInfo typ ns =
-    let typeName = getAttr "name" typ in
-    if typeName == "none"
-    then None
-    else Some (parseTypeName typeName ns)
-
-
-let parseTypeElements typ ns =
-    let types = parseChildrenWithLocalName "type" (parseTypeInfo typ ns) in
-    let arrays = parseChildrenWithLocalName "array" (parseArrayInfo typ ns)
-    in types (*TODO, si può applicare map a Some?*)
-
-
-let parseType typ ns =
-    match parseTypeElements typ ns with
-    | [Some e] -> e
-    | [] -> assert false;
-    | [None] -> assert false;
-    | _ -> assert false;
-
-
 let parseArrayInfo typ ns =
     match queryAttr "name" typ with
     | Some "GLib.Array" -> TGArray (parseType typ ns)
@@ -146,8 +81,60 @@ let parseCArrayType typ ns =
                        | Some s -> parseIntegral s
                        | None -> -1
     in let elementType = parseType typ ns in
-    TCArray zeroTerminated fixedSize length elementType
+    TCArray (zeroTerminated fixedSize length elementType)
 
+
+let parseHashTable typ ns =
+    match parseTypeElements typ ns with
+    | [Some key, Some value] -> TGHash (key value)
+    | _ -> assert false
+
+
+let parseClosure typ ns =
+    match queryAttr "closure-type" typ with
+    | Some t -> TGClosure (Some (parseTypeName t typ ns))
+    | None -> TGClosure None
+
+
+let parseListType typ ns = 
+    match queryType typ ns with
+    | Some t -> t
+    | None -> TBasicType TPtr
+
+
+let parseFundamentalType str1 str2 typ ns =
+    match str1, str2 with
+    | "GLib", "List" -> TGList (parseListType typ ns)
+    | "GLib", "SList" -> TGSList (parseListType typ ns)
+    | "GLib", "HashTable" -> parseHashTable typ ns
+    | "GLib", "Error" -> TError
+    | "GLib", "Variant" -> TVariant
+    | "GObject", "ParamSpec" -> TParamSpec
+    | "GObject", "Value" -> TGValue
+    | "GObject", "Closure" -> parseClosure typ ns
+    | ns, n -> assert false (*TODO resolveQualifiedTypeName {namespace = ns; name = n}*)
+
+
+let parseTypeName typename typ ns =
+    match nameToBasicType typename with
+    | Some b -> TBasicType b
+    | None -> match String.split_on_char '.' typename with
+              | ns::n -> parseFundamentalType ns n
+              | n::[] -> parseFundamentalType ns n
+              | _ -> assert false
+
+
+let parseTypeInfo typ ns =
+    let typeName = getAttr "name" typ in
+    if typeName == "none"
+    then None
+    else Some (parseTypeName typeName ns)
+
+
+let parseTypeElements typ ns =
+    let types = parseChildrenWithLocalName "type" (parseTypeInfo typ ns) in
+    let arrays = parseChildrenWithLocalName "array" (parseArrayInfo typ ns)
+    in types (*TODO, si può applicare map a Some?*)
 
 
 let queryCType typ =
@@ -158,12 +145,26 @@ let parseCType typ =
     getAttrWithNamespace CGIRNS "type" typ
 
 
-
 let parseCTypeNameElements typ =
     let types = parseChildrenWithLocalName "type" queryCType in
     let arrays = parseChildrenWithLocalName "array" queryCType in
     let f x = x in
     List.filter_map f (types @@ arrays)
+
+
+let queryType typ ns =
+    match parseTypeElements typ ns with
+    | [Some e] -> Some e
+    | [] -> None (*TODO* in Haksell [] cosa significa? *)
+    | [None] -> assert false
+
+
+let parseType typ ns =
+    match parseTypeElements typ ns with
+    | [Some e] -> e
+    | [] -> assert false
+    | [None] -> assert false
+    | _ -> assert false
 
 
 let parseOptionalType typ ns =
@@ -178,7 +179,4 @@ let queryElementCType typ =
     | [ctype] -> Some ctype
     | [] -> None
     | _ -> assert false
-
-
-
 
