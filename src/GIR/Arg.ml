@@ -1,3 +1,89 @@
+open BasicTypes
+open Parser
+open Type
+open Documentation
+
+type direction =
+    | DirectionIn
+    | DirectionOut
+    | DirectionInout
+
+
+type scope =
+    | ScopeTypeInvalid
+    | ScopeTypeCall
+    | ScopeTypeAsync
+    | ScopeTypeNotified
+
+
+type arg = { 
+    argCName: string;
+    argType: type_ml;
+    direction: direction;
+    mayBeNull: bool;
+    argDoc: documentation;
+    argScope: scope;
+    argClosure: int;
+    argDestroy: int;
+    argCallerAllocates: bool;
+    transfer: transfer;
+    }
+
+(* xml -> transfer *) 
+let parseTransfer el =
+  match getAttr "transfer-ownership" el with
+  | "none" -> TransferNothing
+  | "container" -> TransferContainer
+  | "full" -> TransferEverything
+  | _ -> assert false
+
+
+(* string -> scope *)
+let parseScope str =
+  match str with
+  | "call" -> ScopeTypeCall
+  | "async" -> ScopeTypeAsync
+  | "notified" -> ScopeTypeNotified
+  | _ -> assert false
+
+
+(* string -> direction *)
+let parseDirection str =
+  match str with
+  | "in" -> DirectionIn
+  | "out" -> DirectionOut
+  | "inout" -> DirectionInout
+  | _ -> assert false
+
+(* xml -> string -> arg *)
+let parseArg el ns =
+  let name = getAttr "name" el in
+  let ownership = parseTransfer el in
+  let scope = optionalAttr "scope" ScopeTypeInvalid el parseScope in
+  let d = optionalAttr "direction" DirectionIn el parseDirection in
+  let closure = optionalAttr "closure" (-1) el parseIntegral in
+  let destroy = optionalAttr "destroy" (-1) el parseIntegral in
+  let nullable = optionalAttr "nullable" false el parseBool in
+  let allowNone = optionalAttr "allow-none" false el parseBool in
+  let mayBeNull = if d == DirectionIn
+                  then nullable || allowNone
+                  else nullable
+  in let callerAllocates = optionalAttr "caller-allocates" false el parseBool in
+  let t = parseType el ns in
+  let doc = parseDocumentation el in
+  { argCName = name;
+    argType = t;
+    argDoc = doc;
+    direction = d;
+    mayBeNull = mayBeNull;
+    argScope = scope;
+    argClosure = closure;
+    argDestroy = destroy;
+    argCallerAllocates = callerAllocates;
+    transfer = ownership;
+  }
+
+
 (*module GI = GObject_introspection
 module B = Bindings
 

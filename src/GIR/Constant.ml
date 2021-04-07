@@ -1,3 +1,30 @@
+open Type
+open Parser
+open BasicTypes
+open Documentation
+open Deprecation
+
+type constant = {
+    constantType: type_ml;
+    constantValue: string;
+    constantCType: string;
+    constantDocumentation: documentation;
+    constantDeprecated: deprecation_info option;
+}
+
+
+
+let parseConstant ns el =
+  let name = parseName el ns in
+  name, 
+  {constantType = parseType el ns;
+   constantValue = getAttr "value" el;
+   constantCType = parseCType el;
+   constantDocumentation = parseDocumentation el;
+   constantDeprecated = parseDeprecation el;
+  }
+
+
 (*
 open BasicTypes
 
@@ -24,4 +51,6 @@ let parseConstant constant_info =
     { constantValue = GI.Constant_info.get_value constant_info;
       constantType = GI.Constant_info.get_type constant_info |> cast_to_type_ml;
       constantIsDeprecated = GI.Constant_info.to_baseinfo constant_info |> GI.Base_info.is_deprecated;
-    })*)
+    })*
+
+)*)

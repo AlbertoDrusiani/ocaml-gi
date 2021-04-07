@@ -42,10 +42,10 @@ let queryAttr attr element =
 let queryAttrWithNamespace ns attr element =
     lookupAttrWithNamespace ns attr element
 
-(* string -> string -> xml -> string *)
-let optionalAttr attr def element =
+(* string -> 'a -> xml -> (string -> 'a) -> 'a *)
+let optionalAttr attr def element func =
     match queryAttr attr element with
-    | Some a -> a
+    | Some a -> func a
     | None -> def
 
 (* string -> string -> BasicTypes.name*)

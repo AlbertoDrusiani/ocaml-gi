@@ -1,6 +1,6 @@
 open XMLUtils
 
-type _DeprecationInfo = {
+type deprecation_info = {
     deprecatedSinceVersion: string option;
     deprecationMessage: string option;
 }
