@@ -67,9 +67,9 @@ let parseDeprecation element =
 let parseDocumentation element =
    queryDocumentation element 
 
-(* string -> int option *)
+(* string -> int *)
 let parseIntegral str =
-    try Some (int_of_string str)
+    try int_of_string str
     with Failure _ -> assert false
  
 (* string -> bool *)    
