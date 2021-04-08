@@ -1,3 +1,73 @@
+open Arg
+open BasicTypes
+open Parser
+open Type
+open Documentation
+open Deprecation
+
+type callable ={ 
+    returnType: type_ml option;
+    returnMayBeNull: bool;
+    returnTransfer: transfer;
+    returnDocumentation: documentation;
+   (* args: arg list;*)
+    skipReturn: bool;
+    callableThrows: bool;
+    callableDeprecated: deprecation_info option;
+    callableDocumentation: documentation;
+    callableResolvable: bool option;
+    }
+
+
+(*let parseArgs ns el =
+  let parseArgSet = parseChildrenWithLocalName "parameter" el in
+  let paramSets = parseChildrenWithLocalName "parameters" el 
+TODO non capisco come gestirla, troppi parser..*)
+
+(* xml -> string -> (type_ml option * bool * transfer * bool * documentation) *)
+let parseOneReturn el ns =
+  let returnType = parseOptionalType el ns in
+  let allowNone = optionalAttr "allow-none" false el parseBool in
+  let nullable = optionalAttr "nullable" false el parseBool in
+  let transfer = parseTransfer el in
+  let doc = parseDocumentation el in
+  let skip = optionalAttr "skip" false el parseBool in
+  returnType, allowNone || nullable, transfer, skip, doc
+
+
+(* xml -> string -> (type_ml option * bool * transfer * bool * documentation) *)
+let parseReturn el ns =
+  (*let return_set_list = parseChildrenWithLocalName "return-value" el in
+  let length = List.length return_set_list in
+  let returnSets = List.map2 parseOneReturn return_set_list (List.init length (fun _ -> ns)) in*)
+  let returnSets = List.map (fun x -> x ns) (List.map parseOneReturn (parseChildrenWithLocalName "return-value" el)) in
+  match returnSets with
+  | r::[] -> r
+  | [] -> assert false
+  | _ -> assert false
+
+
+let parseCallable el ns =
+ (* let args = parseArgs el ns in*)
+  let returnType, mayBeNull, transfer, skip, returnDoc = parseReturn el ns in
+  let deprecated = parseDeprecation el in
+  let docs = parseDocumentation el in
+  let throws = optionalAttr "throws" false el parseBool in
+  { returnType = returnType;
+    returnMayBeNull = mayBeNull;
+    returnTransfer = transfer;
+    returnDocumentation = returnDoc;
+   (* args = args;*)
+    skipReturn = skip;
+    callableThrows = throws;
+    callableDeprecated = deprecated;
+    callableDocumentation = docs;
+    callableResolvable = None;
+  }
+
+
+
+
 (*module GI = GObject_introspection
 module B = Bindings
 

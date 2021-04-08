@@ -1,21 +1,29 @@
-(*module GI = GObject_introspection
-
 open Callable
+open Parser
 open BasicTypes
 
-type function_ml = { 
-    fnSymbol: string;
-    (*fnMovedTo: string option;*)
-    fnCallable: callable;
-    }
+type function_ml = {
+  fnSymbol: string;
+  fnMovedTo: string option;
+  fnCallable: callable;
+}
 
-(*passo un Function_info*)    
-let parseFunction f =
-    prerr_endline("pppppppppppp FUNCTION pppppppppppppp");
-    let name = GI.Function_info.to_baseinfo f |> getName in
-    (name,
-    { fnSymbol = GI.Function_info.get_symbol f;
-      fnCallable = GI.Function_info.to_callableinfo f |> parseCallable
-    })
-      
-*)
+
+let parseFunction el ns =
+  let name_ = parseName el ns in
+  let shadows = queryAttr "shadows" el in
+  let exposedName = 
+    begin
+     match shadows with
+     | Some n -> {name_ with name = n}
+     | None -> name_
+    end
+  in let callable = parseCallable el ns in
+  let symbol = getAttrWithNamespace CGIRNS "identifier" el in
+  let movedTo = queryAttr "moved-to" el in
+  exposedName,
+  { fnSymbol = symbol;
+    fnCallable = callable;
+    fnMovedTo = movedTo;
+  }
+

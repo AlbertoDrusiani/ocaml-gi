@@ -1,7 +1,7 @@
 
 type name = 
     { namespace : string;
-      name : string option;
+      name : string;
     }
 
 type transfer =

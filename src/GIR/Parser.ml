@@ -14,7 +14,7 @@ let elementDescription element =
 
 
 let nameInCurrentNS ns n =
-    { namespace = ns;  name = Some n;}
+    { namespace = ns;  name = n;}
 
 
 (*let resolveQualifiedTypeName name knownAliases =
@@ -28,7 +28,7 @@ let getAttr attr element =
     | Some v -> v
     | None -> "Errore in getAttr"
 
-(* string -> string -> xml -> string *)
+(* GIRXMLNamespace -> string -> xml -> string *)
 let getAttrWithNamespace ns attr element =
     match lookupAttrWithNamespace ns attr element with
     | Some v -> v
@@ -52,7 +52,7 @@ let optionalAttr attr def element func =
 let qualifyName n ns =
     match String.split_on_char '.' n with
     | x::[] -> nameInCurrentNS ns x
-    | x::xs::[] -> {namespace = x; name = Some xs;}
+    | x::xs::[] -> {namespace = x; name = xs;}
     | _ -> assert false
 
 (* xml -> string -> BasicTypes.name *)
@@ -81,10 +81,11 @@ let parseBool str =
    
 
 (* string -> xml -> xml list *)
-let parseChildrenWithLocalName n element =
+let parseChildrenWithLocalName n element = (*TODO va sistemata *)
     let introspectable e = 
         ((lookupAttr "introspectable" e) != (Some "0")) && ((lookupAttr "shadowed-by" e) == None)
-    in  List.filter introspectable (childElemsWithLocalName n element)
+    in List.filter introspectable (childElemsWithLocalName n element)
+
 
 (* string -> xml -> xml list *)
 let parseAllChildrenWithLocalName n element =

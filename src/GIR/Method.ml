@@ -1,9 +1,7 @@
-(*module GI = GObject_introspection
-module B = Bindings
-
-open BasicTypes
+(*open Arg*)
 open Callable
-
+(*open Parser*)
+open BasicTypes
 
 type method_type =
     | Constructor
@@ -11,31 +9,43 @@ type method_type =
     | OrdinaryMethod
 
 
-
-type method_ml ={ 
+type method_ml = { 
     methodName: name;
     methodSymbol: string;
-   (* methodType: method_type;*) (*L'API MI RITORNA UNA LISTA, COME GESTISCO?*)
-   (* methodMovedTo: string option;*) (*NON SO COSA SIA*)
+    methodType: method_type;
+    methodMovedTo: string option;
     methodCallable: callable;
     }
 
-(*prende un B.Function_info.flags*)
-let parseMethodType (l : B.Function_info.flags) =
-    match l with
-    | Is_method -> OrdinaryMethod
-    | Is_constructor -> Constructor
-    | _ -> MemberFunction
+(*TODO da capire la solita questione di parseChildren con i parser vari*)
+(*let parseInstanceArg el ns =
+ (* let parseInstPars el ns =*)
+    List.map ((List.map parseArg (parseChildrenWithLocalName "instance-parameters" el))) ns
+  *)
 
-(*passo un Method_info*)    
-let parseMethod m =
-    prerr_endline("pppppppppppp METHOD pppppppppp");
-    let method_name = 
-        { name = GI.Function_info.to_baseinfo m |> GI.Base_info.get_name;
-          namespace = GI.Function_info.to_baseinfo m |> GI.Base_info.get_namespace;
-        } in
-    { methodName = method_name;
-      methodSymbol = GI.Function_info.get_symbol m;
-     (* methodType = GI.Function_info.*)
-      methodCallable = GI.Function_info.to_callableinfo m |> parseCallable;
-    }*)
+(*
+let parseMethod el ns mtype =
+  let name_ = parseName el ns in
+  let shadown = queryAttr "shadows" el in
+  let exposedName = match shadows with
+                    | Some n -> {name_ with name = n}
+                    | None -> name_
+  in let callable =
+       if mType != OrdinaryMethod
+       then parseCallable el ns
+       else
+         let c = parseCallable el ns in
+         let instanceArg = parseInstanceArg el ns in
+         { c with args = instanceArg::(c.args)}
+  in let symbol = gettAttrWithNamespace CGIRNS "identifier" el in
+  let movedTo = queryAttr "moved-to" in
+  { methodName = exposedName;
+    methodSymbol = symbol;
+    methodType = mType;
+    methodMovedTo = movedTo;
+    methodCallable = callabe;
+  }
+
+*)
+
+

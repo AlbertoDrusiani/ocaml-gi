@@ -94,14 +94,16 @@ and parseCArrayType typ ns =
 
 (* xml -> string -> type_ml list option *)    
 and parseTypeElements typ ns =
-    let typeChildren = parseChildrenWithLocalName "type" typ in
-    let arrayChildren = parseChildrenWithLocalName "array" typ in
-    let typeLength = List.length typeChildren in
-    let arrayLength = List.length arrayChildren in
-    let duplicateNS _ = ns in
-    let types = List.map2 parseTypeInfo typeChildren (List.init typeLength duplicateNS) in
-    let arrays = List.map2 parseArrayInfo arrayChildren (List.init arrayLength duplicateNS) in
-    types @ applyOption arrays(*TODO, si può applicare map a Some?*)
+   (* let typeChildren = parseChildrenWithLocalName "type" typ in
+    let arrayChildren = parseChildrenWithLocalName "array" typ in*)
+    (*let typeLength = List.length typeChildren in
+    let arrayLength = List.length arrayChildren in*)
+   (* let duplicateNS _ = ns in*)
+   (* let types = List.map2 parseTypeInfo typeChildren (List.init typeLength duplicateNS) in*)
+    let types = List.map (fun x -> x ns) (List.map parseTypeInfo (parseChildrenWithLocalName "type" typ)) in
+   (* let arrays = List.map2 parseArrayInfo arrayChildren (List.init arrayLength duplicateNS) in*)
+    let arrays = List.map (fun x -> x ns) (List.map parseArrayInfo (parseChildrenWithLocalName "array" typ)) in
+    types @ applyOption arrays
 
 (* xml -> string -> type_ml option *)
 and parseTypeInfo typ ns =
@@ -115,8 +117,8 @@ and parseTypeName typename typ ns =
     match nameToBasicType typename with
     | Some b -> TBasicType b
     | None -> match String.split_on_char '.' typename with
-              | ns::n::[] -> parseFundamentalType ns n typ ns
-              | n::[] -> parseFundamentalType ns n typ ns
+              | xs::x::[] -> parseFundamentalType xs x typ ns
+              | x::[] -> parseFundamentalType ns x typ ns
               | _ -> assert false
 
 (* string -> string -> xml -> string -> type_ml *)
@@ -174,7 +176,7 @@ let parseCTypeNameElements typ =
     List.filter_map f (types @ arrays)
 
 
-(* xml -> string -> type_ml TODO *)
+(* xml -> string -> type_ml option TODO *)
 let parseOptionalType typ ns =
     match parseTypeElements typ ns with
     | [e] -> e

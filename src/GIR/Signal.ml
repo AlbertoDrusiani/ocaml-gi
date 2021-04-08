@@ -1,23 +1,26 @@
-(*module GI = GObject_introspection
-
-
 open Callable
-open BasicTypes
+open Parser
+open Documentation
+open Deprecation
 
 type signal = { 
-    sigName: string option;
+    sigName: string;
     sigCallable: callable;
-    sigDeprecated: bool;
-     (* sigDetailed: bool;*)
-     (* sigDoc: documentation;*)
+    sigDeprecated: deprecation_info option;
+    sigDetailed: bool;
+    sigDoc: documentation;
     }
 
-(*passo un signal_info*)
-let parseSignal s =
-    prerr_endline("pppppppppppp SIGNAL pppppppppp");
-    let name =  GI.Signal_info.to_baseinfo s |> getOnlyName in
-    { 
-        sigName = name;
-        sigCallable = GI.Signal_info.to_callableinfo s |> parseCallable;
-        sigDeprecated = GI.Signal_info.to_baseinfo s |> GI.Base_info.is_deprecated;
-    }*)
+
+let parseSignal el ns =
+  let n = getAttr "name" el in
+  let detailed = optionalAttr "detailed" false el parseBool in
+  let deprecated = parseDeprecation el in
+  let callable = parseCallable el ns in
+  let doc = parseDocumentation el in
+  { sigName = n;
+    sigCallable = callable;
+    sigDeprecated = deprecated;
+    sigDetailed = detailed;
+    sigDoc = doc;
+  }

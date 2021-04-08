@@ -1,3 +1,58 @@
+(*open BasicTypes
+open Callback
+open Type*)
+open Parser
+open Documentation
+open Deprecation
+
+
+type field_info_flag =
+    | FieldIsReadable
+    | FieldIsWritable
+
+type field =
+    { fieldName: string;
+      fieldVisible: bool;
+     (* fieldType: type_ml option;
+      fieldIsPointer: bool option;
+      fieldCallback: callback option;
+      fieldOffset: int;*)
+      fieldFlags: field_info_flag list;
+      fieldDocumentation: documentation;
+      fieldDeprecated: deprecation_info option;
+    }
+
+
+let parseField el _(*ns*) =
+  let name = getAttr "name" el in
+  let deprecated = parseDeprecation el in
+  let readable = optionalAttr "readable" true el parseBool in
+  let writable = optionalAttr "writable" false el parseBool in
+  let flags = (if readable then [FieldIsReadable] else [])
+              @ (if writable then [FieldIsWritable] else [])
+  in let introspectable = optionalAttr "introspectable" true el parseBool in
+  let private_field = optionalAttr "private" false el parseBool in
+  let doc = parseDocumentation el in
+  (*TODO tutto quella roba in mezzo*)
+  Some { fieldName = name;
+         fieldVisible = introspectable && not private_field;
+        (* fieldType = t;
+         fieldIsPointer =
+         fieldCallback =
+         fieldOffset = *)
+         fieldFlags = flags;
+         fieldDocumentation = doc;
+         fieldDeprecated = deprecated;
+       }
+
+let parseFields el ns =
+  let l = parseAllChildrenWithLocalName "field" el in
+  let length = List.length l in
+  List.filter_map (fun x -> x) (List.map2 parseField l (List.init length (fun _ -> ns)))
+
+
+
+
 (*module GI = GObject_introspection
 module B = Bindings
 
