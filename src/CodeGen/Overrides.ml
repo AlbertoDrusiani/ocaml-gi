@@ -1,4 +1,4 @@
-open GIR.BasicTypes
+(*open GIR.BasicTypes
 
 
 module SetNames = Set.Make(struct type t = name let compare = compare end)
@@ -10,4 +10,4 @@ module MapNamesText = Map.Make(struct type t = name let compare = compare end)
     ignoredAPIs: Set.*)
    
 
-
+*)
