@@ -1,48 +1,58 @@
-(*module GI = GObject_introspection
-
+open Allocation
 open Field
-open Method
+(*open Method*)
+open Parser
 open BasicTypes
+open Type
+open Deprecation
+open Documentation
 
 type struct_ml = { 
-    (*structIsBoxed: bool;*)
-     (* structAllocationInfo: allocation_info; *)
-    structTypeInit: string option; (*OK*)
-    structCType: string option; (*OK*)
-    structSize: int; (*OK*)
-   (* gtypeStructFor: string option;*)
-   (* structIsDisguised: bool;*)(*inserito per un bug trovato in gir, non presente nella libreria C*)
-   (* structForceVisible: bool;*)
-    structFields: field list ref; (*OK*)
-    structMethods: method_ml list ref; (*OK*)
-    structDeprecated: bool; (*OK*)
-     (* structDocumentation: documentation*)
+    structIsBoxed: bool;
+    structAllocationInfo: allocation_info;
+    structTypeInit: string option;
+    structCType: string option;
+    structSize: int;
+    gtypeStructFor: name option;
+    structIsDisguised: bool;
+    structForceVisible: bool;
+    structFields: field list;
+   (* structMethods: method_ml list;*)
+    structDeprecated: deprecation_info option;
+    structDocumentation: documentation;
 }
 
-(*passo una Struct_info*)
-let parseStruct s =
-    prerr_endline("pppppppppp STRUCT ppppppppppp");
-    let l_fields = ref [] in
-   (*print_endline("Primo for");*)
-    for i = (GI.Struct_info.get_n_fields s) - 1 downto 0 do
-        l_fields := (GI.Struct_info.get_field s i |> parseField) :: !l_fields
-    done;
-     
-    let l_methods = ref [] in
-    (*print_endline("Secondo_for");*)
-    for i = (GI.Struct_info.get_n_methods s) - 1 downto 0 do
-        l_methods := (GI.Struct_info.get_method s i |> parseMethod) :: !l_methods
-    done;
-    let name = GI.Struct_info.to_baseinfo s |> getName in
-    (*print_endline("Terzo for");*)
-    (name,
-    {
-        structTypeInit = GI.Struct_info.to_registeredtypeinfo s |> GI.Registered_type_info.get_type_init;
-        structCType = GI.Struct_info.to_registeredtypeinfo s |> GI.Registered_type_info.get_type_name;
-        structSize = GI.Struct_info.get_size s;
-        structFields = l_fields;
-        structMethods = l_methods;
-        structDeprecated = GI.Struct_info.to_baseinfo s |> GI.Base_info.is_deprecated;
-    })
-*)
-    
+
+let parseStruct el ns =
+  let name = parseName el ns in
+  let deprecated = parseDeprecation el in
+  let doc = parseDocumentation el in
+  let structFor = 
+    match queryAttrWithNamespace GLibGIRNS "is-gtype-struct-for" el with
+    | Some t -> Some (qualifyName t ns)
+    | None -> None
+  in let typeInit = queryAttrWithNamespace GLibGIRNS "get-type" el in
+  let maybeCType = queryCType el in
+  let disguised = optionalAttr "disguised" false el parseBool in
+  (*TODO valore settato nei file di overrides, lasciamo così fino a che non arriviamo quel punto*)
+  let forceVisibile = optionalAttr "haskell-gi-force-visible" false el parseBool in
+  let fields = parseFields el ns in
+  (*TODO solito problema della parseChildrenWithLocalName
+  let constructors =
+  let methods =
+  let functions =
+    *)
+  name,
+  { structIsBoxed = true; (*TODO qua mette un error, non ho capito cosa serva*)
+    structAllocationInfo = unknownAllocationInfo;
+    structTypeInit = typeInit;
+    structCType = maybeCType;
+    structSize = 0; (*TODO anche qua mette un error*)
+    gtypeStructFor = structFor;
+    structIsDisguised = disguised;
+    structForceVisible = forceVisibile;
+    structFields = fields;
+    (*structMethods = constructor @ methods @ functions;*)
+    structDeprecated = deprecated;
+    structDocumentation = doc;
+  }

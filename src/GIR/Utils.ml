@@ -17,8 +17,8 @@ let rec list_min l min =
     if x < min then list_min xs x
     else list_min xs min
 
-
-let maximumMay l max =
-    match list_max l max with
-    | _ when max == min_int -> None
+(* 'a list -> 'a -> 'a -> 'a option *)
+let maximumMay l acc min =
+    match list_max l acc with
+    | c when c == min -> None
     | m -> Some m
