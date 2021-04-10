@@ -13,8 +13,7 @@ type constant = {
 }
 
 
-
-let parseConstant ns el =
+let parseConstant el ns =
   let name = parseName el ns in
   name, 
   {constantType = parseType el ns;

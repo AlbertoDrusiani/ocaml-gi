@@ -59,7 +59,7 @@ let girFile name version searchPath =
   (*TODO fa roba per monadi, forse skippabile *)
   girFile' name version searchPath
 
-
+(* bool -> string -> string option -> xml *)
 let readGiRepository verbose name version (*extraPaths*) =
   let searchPath = buildSearchPath in
   match girFile name version searchPath with

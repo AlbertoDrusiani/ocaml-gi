@@ -15,5 +15,5 @@ let queryDeprecated element =
         | Some msg -> getElementContent msg
         | None -> None
         in Some { deprecatedSinceVersion = version; deprecationMessage = m;}        
-    with Xml.No_attribute str -> prerr_endline str;  None
+    with Xml.No_attribute str -> prerr_endline ("Deprecation riga 18, errore: " ^ str);  None
     

@@ -132,7 +132,7 @@ let getElementContent el =
 let lookupAttr attr element =
     try
         Some (Xml.attrib element attr) (*TODO da capire come viene poi chiamata, per vedere se devo lasciare il namespace prima dei due punti*)
-    with Xml.No_attribute str -> prerr_endline str; None
+    with Xml.No_attribute str -> prerr_endline ("lookupAttr, XMLUtils.ml riga 135: " ^ str); None
 
 (*prendo il local name dell'attributo e ci piazzo davanti il namespace dato, e poi cerco*)
 (* GIRXMLNamespace -> string -> xml -> string option *)
