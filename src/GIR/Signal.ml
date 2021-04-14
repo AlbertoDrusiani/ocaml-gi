@@ -12,11 +12,12 @@ type signal = {
     }
 
 
-let parseSignal ns el =
+let parseSignal ns aliases el =
+  prerr_endline ("Inizio il parseSignal");
   let n = getAttr "name" el in
   let detailed = optionalAttr "detailed" false el parseBool in
   let deprecated = parseDeprecation el in
-  let callable = parseCallable el ns in
+  let callable = parseCallable ns aliases el in
   let doc = parseDocumentation el in
   { sigName = n;
     sigCallable = callable;

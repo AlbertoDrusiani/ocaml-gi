@@ -58,23 +58,24 @@ let resolveInternalType nm =
 
 
 
-let parseObject el ns =
+let parseObject ns aliases el =
+  prerr_endline ("Inizio il parse Object");
   let name = parseName ns el in
   let deprecated = parseDeprecation el in
   let doc = parseDocumentation el in
-  let methods = List.map (parseMethod ns OrdinaryMethod) (parseChildrenWithLocalName "method" el) in
-  let constructor = List.map (parseMethod ns Constructor) (parseChildrenWithLocalName "constructor" el) in
-  let functions =  List.map (parseMethod ns MemberFunction) (parseChildrenWithLocalName "function" el) in
+  let methods = List.map (parseMethod ns aliases OrdinaryMethod) (parseChildrenWithLocalName "method" el) in
+  let constructor = List.map (parseMethod ns aliases Constructor) (parseChildrenWithLocalName "constructor" el) in
+  let functions =  List.map (parseMethod ns aliases MemberFunction) (parseChildrenWithLocalName "function" el) in
   let parent =  optionalAttr "parent" None el (fun x -> Some (qualifyName x ns)) in
   let interfaces =  List.map (parseName ns) (parseChildrenWithLocalName "implements" el) in
-  let props =  List.map (parseProperty ns) (parseChildrenWithLocalName "property" el) in
+  let props =  List.map (parseProperty ns aliases) (parseChildrenWithLocalName "property" el) in
   let typeInitFn = getAttrWithNamespace GLibGIRNS "get-type" el in
   let typeInit = 
     match typeInitFn with
     | "intern" -> resolveInternalType name
     | fn -> fn
   in let typeName = getAttrWithNamespace GLibGIRNS "type-name" el in
-  let signals =  List.map (parseSignal ns) (parseChildrenWithNSName GLibGIRNS "signal" el) in
+  let signals =  List.map (parseSignal ns aliases) (parseChildrenWithNSName GLibGIRNS "signal" el) in
   let refFunc = queryAttrWithNamespace GLibGIRNS "ref-func" el in
   let unrefFunc = queryAttrWithNamespace GLibGIRNS "unref-func" el in
   let setValueFunc = queryAttrWithNamespace GLibGIRNS "set-value-func" el in

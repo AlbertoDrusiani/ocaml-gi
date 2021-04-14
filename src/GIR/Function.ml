@@ -9,7 +9,8 @@ type function_ml = {
 }
 
 
-let parseFunction el ns =
+let parseFunction ns aliases el =
+  prerr_endline ("Inizio il parse Function");
   let name_ = parseName ns el in
   let shadows = queryAttr "shadows" el in
   let exposedName = 
@@ -18,7 +19,7 @@ let parseFunction el ns =
      | Some n -> {name_ with name = n}
      | None -> name_
     end
-  in let callable = parseCallable el ns in
+  in let callable = parseCallable ns aliases el in
   let symbol = getAttrWithNamespace CGIRNS "identifier" el in
   let movedTo = queryAttr "moved-to" el in
   exposedName,

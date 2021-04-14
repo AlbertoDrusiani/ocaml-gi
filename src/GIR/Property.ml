@@ -25,9 +25,10 @@ type property = {
     }
 
 (* xml -> string -> property *)
-let parseProperty ns el =
+let parseProperty ns aliases el =
+  prerr_endline ("Inizio il parse Property");
   let name = getAttr "name" el in
-  let t = parseType el ns in
+  let t = parseType el ns aliases in
   let transfer = parseTransfer el in
   let deprecated = parseDeprecation el in
   let readable = optionalAttr "readable" true el parseBool in

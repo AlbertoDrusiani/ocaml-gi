@@ -23,7 +23,8 @@ type struct_ml = {
 }
 
 
-let parseStruct el ns =
+let parseStruct ns aliases el =
+  prerr_endline ("___Inizio il parse Struct___");
   let name = parseName ns el in
   let deprecated = parseDeprecation el in
   let doc = parseDocumentation el in
@@ -36,10 +37,10 @@ let parseStruct el ns =
   let disguised = optionalAttr "disguised" false el parseBool in
   (*TODO valore settato nei file di overrides, lasciamo così fino a che non arriviamo quel punto*)
   let forceVisibile = optionalAttr "haskell-gi-force-visible" false el parseBool in
-  let fields = parseFields el ns in
-  let constructors = List.map (parseMethod ns Constructor) (parseChildrenWithLocalName "constructor" el) in
-  let methods = List.map (parseMethod ns OrdinaryMethod) (parseChildrenWithLocalName "method" el) in
-  let functions = List.map (parseMethod ns MemberFunction) (parseChildrenWithLocalName "function" el) in
+  let fields = parseFields ns aliases el in
+  let constructors = List.map (parseMethod ns aliases Constructor) (parseChildrenWithLocalName "constructor" el) in
+  let methods = List.map (parseMethod ns aliases OrdinaryMethod) (parseChildrenWithLocalName "method" el) in
+  let functions = List.map (parseMethod ns aliases MemberFunction) (parseChildrenWithLocalName "function" el) in
   name,
   { structIsBoxed = true; (*TODO solita bomba, per ora dummy value*)
     structAllocationInfo = unknownAllocationInfo;

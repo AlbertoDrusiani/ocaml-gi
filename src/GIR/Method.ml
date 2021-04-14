@@ -17,16 +17,17 @@ type method_ml = {
     methodCallable: callable;
     }
 
-let parseInstanceArg ns el =
+let parseInstanceArg ns aliases el =
   let parseInstPars = parseChildrenWithLocalName "parameters" el in
   let instanceInfo = List.map (parseChildrenWithLocalName "instance-parameter") parseInstPars in
   match instanceInfo with
-  | [[inst]] -> parseArg ns inst
+  | [[inst]] -> parseArg ns aliases inst
   | [] -> assert false
   | _ -> assert false
 
 
-let parseMethod ns mType el =
+let parseMethod ns aliases mType el =
+  prerr_endline ("Inizio il parse Method");
   let name_ = parseName ns el in
   let shadows = queryAttr "shadows" el in
   let exposedName = match shadows with
@@ -34,10 +35,10 @@ let parseMethod ns mType el =
                     | None -> name_
   in let callable =
        if mType != OrdinaryMethod
-       then parseCallable el ns
+       then parseCallable ns aliases el
        else
-         let c = parseCallable el ns in
-         let instanceArg = parseInstanceArg ns el in
+         let c = parseCallable ns aliases el in
+         let instanceArg = parseInstanceArg ns aliases el in
          { c with args = instanceArg::(c.args)}
   in let symbol = getAttrWithNamespace CGIRNS "identifier" el in
   let movedTo = queryAttr "moved-to" el in

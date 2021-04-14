@@ -23,7 +23,8 @@ type field =
     }
 
 
-let parseField el ns =
+let parseField ns aliases el =
+  prerr_endline ("Inzio il parse Field");
   let name = getAttr "name" el in
   let deprecated = parseDeprecation el in
   let readable = optionalAttr "readable" true el parseBool in
@@ -36,7 +37,7 @@ let parseField el ns =
   (*TODO skippata la parte del controllo introspectable, flip e company*)
   let t, isPtr, callback = 
     if introspectable then
-      let callbacks = List.map (parseCallback ns) (parseChildrenWithLocalName "callback" el) in
+      let callbacks = List.map (parseCallback ns aliases) (parseChildrenWithLocalName "callback" el) in
       let cbn, callback =
         match callbacks with
         | [] -> None, None
@@ -45,7 +46,7 @@ let parseField el ns =
       in let t, isPtr =
         match cbn with
         | None ->
-          let t = parseType el ns in
+          let t = parseType el ns aliases in
           let ct = queryElementCType el in
           let is = match ct with
                    | Some c -> (c.[(String.length c)-1] = '*')
@@ -57,7 +58,7 @@ let parseField el ns =
       let callbacks = List.map (parseName ns) (parseAllChildrenWithLocalName "callback" el) in
       match callbacks with
       | [] -> 
-        let t = parseType el ns in
+        let t = parseType el ns aliases in
         let ct = queryElementCType el in
         let is = match ct with
                  | Some c -> (c.[(String.length c)-1] = '*')
@@ -77,8 +78,6 @@ let parseField el ns =
          fieldDeprecated = deprecated;
        }
 
-let parseFields el ns =
-  let l = parseAllChildrenWithLocalName "field" el in
-  let length = List.length l in
-  List.filter_map (fun x -> x) (List.map2 parseField l (List.init length (fun _ -> ns)))
+let parseFields ns aliases el =
+  List.filter_map (fun x -> x) (List.map (parseField ns aliases) (parseChildrenWithLocalName "field" el))
 

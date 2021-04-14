@@ -22,14 +22,15 @@ type interface ={
     }
 
 
-let parseInterface el ns =
+let parseInterface ns aliases el =
+  prerr_endline ("Inizio il parse Interface");
   let name = parseName ns el in
-  let props = List.map (parseProperty ns) (parseChildrenWithLocalName "property" el) in
-  let signals = List.map (parseSignal ns) (parseChildrenWithNSName GLibGIRNS "signal" el) in
+  let props = List.map (parseProperty ns aliases) (parseChildrenWithLocalName "property" el) in
+  let signals = List.map (parseSignal ns aliases) (parseChildrenWithNSName GLibGIRNS "signal" el) in
   let typeInit = queryAttrWithNamespace GLibGIRNS "get-type" el in
-  let methods = List.map (parseMethod ns OrdinaryMethod) (parseChildrenWithLocalName "method" el) in
-  let functions = List.map (parseMethod ns MemberFunction) (parseChildrenWithLocalName "function" el) in
-  let constructors = List.map (parseMethod ns Constructor) (parseChildrenWithLocalName "constructor" el) in
+  let methods = List.map (parseMethod ns aliases OrdinaryMethod) (parseChildrenWithLocalName "method" el) in
+  let functions = List.map (parseMethod ns aliases MemberFunction) (parseChildrenWithLocalName "function" el) in
+  let constructors = List.map (parseMethod ns aliases Constructor) (parseChildrenWithLocalName "constructor" el) in
   let deprecated = parseDeprecation el in
   let doc = parseDocumentation el in
   let ctype = queryCType el in

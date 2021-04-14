@@ -30,7 +30,7 @@ let girFile' name version path =
                let version = maximumMay (List.map float_of_string splitted) neg_infinity neg_infinity in
                begin
                 match version with
-                | Some v -> Some (girFilePath name (string_of_float v) path)
+                | Some v -> Some (girFilePath name ((string_of_float v) ^ "0" ) path)
                 | None -> None
                 end
      | false -> None

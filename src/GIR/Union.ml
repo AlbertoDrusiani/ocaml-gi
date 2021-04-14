@@ -19,7 +19,8 @@ type union = {
     unionDeprecated: deprecation_info option;
 }
 
-let parseUnion el ns =
+let parseUnion ns aliases el =
+  prerr_endline ("Inizio il parseUnion");
   let name = parseName ns el in
   let deprecated = parseDeprecation el in
   let doc = parseDocumentation el in
@@ -29,10 +30,10 @@ let parseUnion el ns =
     | Some _ -> true
     | None -> false
 
-  in let fields = parseFields el ns in
-  let constructors = List.map (parseMethod ns Constructor) (parseChildrenWithLocalName "constructor" el) in 
-  let methods = List.map (parseMethod ns OrdinaryMethod) (parseChildrenWithLocalName "method" el) in
-  let functions = List.map (parseMethod ns MemberFunction) (parseChildrenWithLocalName "function" el) in
+  in let fields = parseFields ns aliases el in
+  let constructors = List.map (parseMethod ns aliases Constructor) (parseChildrenWithLocalName "constructor" el) in 
+  let methods = List.map (parseMethod ns aliases OrdinaryMethod) (parseChildrenWithLocalName "method" el) in
+  let functions = List.map (parseMethod ns aliases MemberFunction) (parseChildrenWithLocalName "function" el) in
   let ctype = queryCType el in
   name,
   { unionIsBoxed = isBoxed;

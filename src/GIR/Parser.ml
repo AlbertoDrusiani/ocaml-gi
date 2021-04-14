@@ -18,7 +18,7 @@ let nameInCurrentNS ns n =
 
 (* name -> Map alias type -> type *)
 let rec resolveQualifiedTypeName name knownAliases =
-    match AliasMap.find (Alias name) knownAliases with
+    match AliasMap.find_opt (Alias name) knownAliases with
     | Some (TInterface n) -> resolveQualifiedTypeName n knownAliases
     | Some t -> t
     | None -> TInterface name
@@ -84,8 +84,8 @@ let parseBool str =
 (* string -> xml -> xml list *)
 let parseChildrenWithLocalName n element =
     let introspectable e = 
-        ((lookupAttr "introspectable" e) != (Some "0")) && ((lookupAttr "shadowed-by" e) == None)
-    in List.filter introspectable (childElemsWithLocalName n element)
+        ((lookupAttr "introspectable" e) != (Some "0")) && ((lookupAttr "shadowed-by" e) == None) in
+    List.filter introspectable (childElemsWithLocalName n element)
 
 
 (* string -> xml -> xml list *)

@@ -1,7 +1,7 @@
 (*open GIR.Allocation
-open GIR.Arg
+open GIR.Arg*)
 open GIR.BasicTypes
-open GIR.Callable*)
+(*open GIR.Callable*)
 open GIR.Callback
 open GIR.Constant
 (*open GIR.Deprecation*)
@@ -73,8 +73,8 @@ and gir_rule =
   | GIRDeleteNode of gir_path
 
 (* map alias type -> gir_namespace -> xml -> gir_namespace *)
-let parseNSElement (*aliases*) ns element =
-  prerr_endline ("Inizio il parsing di un NSElement: " ^ Xml.tag element ^ " con name = " ^ Xml.attrib element "name");
+let parseNSElement aliases ns element =
+  prerr_endline ("################ NSElement: " ^ Xml.tag element ^ " con name = " ^ Xml.attrib element "name");
   let parse name api =
     let maybeCType = match lookupAttrWithNamespace CGIRNS "type" element with
                      | Some ctype -> (ctype, name) :: ns.nsCTypes
@@ -83,50 +83,51 @@ let parseNSElement (*aliases*) ns element =
   match lookupAttr "introspectable" element with
   | Some "0" -> prerr_endline ("Elemento da NON parsare"); ns
   | _ -> 
+    prerr_endline ("_______PARSE " ^ (localName (Xml.tag element)) ^ "_______");
     match localName (Xml.tag element) with
     | "alias" -> ns
     | "constant" -> begin
-                     match parseConstant element ns.nsName with
+                     match parseConstant ns.nsName aliases element with
                         | (name, api) -> parse name (APIConst api)
                      end
     | "enumeration" -> begin
-                     match parseEnum element ns.nsName with
+                     match parseEnum ns.nsName element with
                         | (name, api) -> parse name (APIEnum api)
                      end
     | "bitfield" -> begin
-                     match parseFlags element ns.nsName with
+                     match parseFlags ns.nsName element with
                         | (name, api) -> parse name (APIFlags api)
                      end
     | "function" -> begin
-                     match parseFunction element ns.nsName with
+                     match parseFunction ns.nsName aliases element with
                         | (name, api) -> parse name (APIFunction api)
                      end
     | "callback" -> begin
-                     match parseCallback ns.nsName element with
+                     match parseCallback ns.nsName aliases element with
                         | (name, api) -> parse name (APICallback api)
                      end
     | "record" -> begin
-                     match parseStruct element ns.nsName with
+                     match parseStruct ns.nsName aliases element with
                         | (name, api) -> parse name (APIStruct api)
                      end
     | "union" -> begin
-                     match parseUnion element ns.nsName with
+                     match parseUnion ns.nsName aliases element with
                         | (name, api) -> parse name (APIUnion api)
                      end
     | "class" -> begin
-                     match parseObject element ns.nsName with
+                     match parseObject ns.nsName aliases element with
                         | (name, api) -> parse name (APIObject api)
                      end
     | "interface" -> begin
-                     match parseInterface element ns.nsName with
+                     match parseInterface ns.nsName aliases element with
                         | (name, api) -> parse name (APIInterface api)
                      end
     | "boxed" -> ns
     | _ -> assert false
 
 
-(* xml -> map alias type -> gir_namespace*)
-let parseNamespace element (*aliases*) =
+(* map alias type -> xml -> gir_namespace*)
+let parseNamespace aliases element =
   let name = Xml.attrib element "name" in
   prerr_endline ("Inizio il parsing del namespace: " ^ name);
   let version = Xml.attrib element "version" in
@@ -135,7 +136,7 @@ let parseNamespace element (*aliases*) =
              nsAPIs = [];
              nsCTypes = [];
            }
-  in Some (List.fold_left parseNSElement ns (subelements element))
+  in Some (List.fold_left (parseNSElement aliases) ns (subelements element))
 
 (* xml ->  string*string option *)
 let parseInclude element =
@@ -161,22 +162,22 @@ let parsePackage element =
   prerr_endline ("Inizio il parsing del package: " ^ Xml.attrib element "name");
   Some (Xml.attrib element "name")
 
-(* gir_info_parse -> xml -> gir_info_parse *)
-let parseRootElement (*aliases*) info element =
+(* Map alias type -> gir_info_parse -> xml -> gir_info_parse *)
+let parseRootElement aliases info element =
   prerr_endline ("Inizio il parseRootElement: " ^ (Xml.tag element));
   match localName (Xml.tag element) with
   | "include" -> {info with girIPIncludes = parseInclude element :: info.girIPIncludes;}
   | "package" -> {info with girIPPackage = parsePackage element :: info.girIPPackage;}
-  | "namespace" -> {info with girIPNamespaces = parseNamespace element :: info.girIPNamespaces;}
+  | "namespace" -> {info with girIPNamespaces = parseNamespace aliases element :: info.girIPNamespaces;}
   | _ -> info
 
 (* gir_info_parse *)
 let emptyGIRInfoParse =
   {girIPPackage = []; girIPIncludes = []; girIPNamespaces = [] }
 
-(* xml -> gir_info_parse *)
-let parseGIRDocument (*aliases*) doc =
-  List.fold_left parseRootElement (*aliases*) emptyGIRInfoParse (subelements doc)
+(* Map alias type -> xml -> gir_info_parse *)
+let parseGIRDocument aliases doc =
+  List.fold_left (parseRootElement aliases) emptyGIRInfoParse (subelements doc)
 
 (* xml -> *)
 let documentListIncludes doc =
@@ -208,7 +209,7 @@ let toGIRInfo info =
 (* bool -> string -> string option -> gir_info *)
 let loadRawGIRInfo verbose name version (*extrapaths*) =
   let doc = readGiRepository verbose name version (*extrapaths*) in
-  match toGIRInfo (parseGIRDocument (*M.empty)*) doc) with
+  match toGIRInfo (parseGIRDocument AliasMap.empty doc) with
   | Error err -> prerr_endline ("loadRawGIRInfo, API.ml riga 211: " ^ err); assert false (*TODO error, da sistemare*)
   | Ok docGIR -> docGIR
 
@@ -221,7 +222,23 @@ let loadRawGIRInfo verbose name version (*extrapaths*) =
   let parseDeps =*)
 
 
-let run =
-  loadRawGIRInfo true "Atk" (Some "1.0") ;;
+let run verbose ns version =
+  let _ = loadRawGIRInfo verbose ns  version in
+  prerr_endline ("PARSING COMPLETATO: " ^ ns);;
 
-run;;
+
+run true "Atk" None;;
+
+
+
+(*TODO baco trovato in: 
+ * Gio alla line 9199 in cui il parameter con name=... non ha il type quindi ciocca
+ * GdkPixBuf, un return-value non ha la transfer-ownership
+ * Gfk-2.0, come sopra
+ * GLib, come sopra
+ * GObject, come Gio
+ * Gtk-3.0, come Gio
+ * Pango, come Gio
+ * *)
+
+                      

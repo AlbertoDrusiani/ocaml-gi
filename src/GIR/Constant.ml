@@ -13,11 +13,11 @@ type constant = {
 }
 
 
-let parseConstant el ns =
+let parseConstant ns aliases el =
   prerr_endline ("Inizio il parse Constant");
   let name = parseName ns el in
   name, 
-  {constantType = parseType el ns;
+  {constantType = parseType el ns aliases;
    constantValue = getAttr "value" el;
    constantCType = parseCType el;
    constantDocumentation = parseDocumentation el;

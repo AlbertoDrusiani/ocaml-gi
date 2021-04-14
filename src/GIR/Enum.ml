@@ -46,7 +46,8 @@ let extractEnumStorageBytes values =
   get_storage_bytes (list_min values max_int) (list_max values min_int)*)
 
 (* xml -> string -> enum*)
-let parseEnum el ns =
+let parseEnum ns el =
+  prerr_endline ("Inizio il parse Enum");
   let name = parseName ns el in
   let ctype = parseCType el in
   let doc = parseDocumentation el in

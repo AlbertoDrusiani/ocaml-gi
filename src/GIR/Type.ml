@@ -70,8 +70,7 @@ let rec parseArrayInfo ns aliases typ =
     | Some _ -> assert false
     | None -> parseCArrayType typ ns aliases
 
-(* xml -> string -> type_ml option*)
-(* TODO da dover gestire i vari assert false, li gestiamo con option, result, monadi?*)
+(* xml -> string -> Map alias type -> type_ml option*)
 and parseType typ ns aliases =
     match parseTypeElements typ ns aliases with
     | [Some e] ->  e
@@ -95,9 +94,9 @@ and parseCArrayType typ ns aliases =
 
 (* xml -> string -> type_ml list option *)    
 and parseTypeElements typ ns aliases =
-    let types =  List.map (parseTypeInfo ns aliases) (parseChildrenWithLocalName "type" typ) in
-    let arrays = List.map (parseArrayInfo ns aliases) (parseChildrenWithLocalName "array" typ) in
-    types @ applyOption arrays
+  let types =  List.map (parseTypeInfo ns aliases) (parseChildrenWithLocalName "type" typ) in
+  let arrays = List.map (parseArrayInfo ns aliases) (parseChildrenWithLocalName "array" typ) in
+  types @ applyOption arrays
 
 (* string -> xml -> type_ml option *)
 and parseTypeInfo ns aliases typ =
@@ -111,8 +110,8 @@ and parseTypeName typename typ ns aliases =
     match nameToBasicType typename with
     | Some b -> TBasicType b
     | None -> match String.split_on_char '.' typename with
-              | xs::x::[] -> parseFundamentalType xs x typ ns aliases
-              | x::[] -> parseFundamentalType ns x typ ns aliases
+      | xs::x::[] -> parseFundamentalType xs x typ ns aliases
+      | x::[] -> parseFundamentalType ns x typ ns aliases
               | _ -> assert false
 
 (* string -> string -> xml -> string -> type_ml *)

@@ -8,10 +8,11 @@ type documentation = {
 
 (* xml -> dumentation *)
 let queryDocumentation element =
-    let doc = match firstChildWithLocalName "doc" element with
+  prerr_endline ("Inizio il parse Documentation");
+  let doc = match firstChildWithLocalName "doc" element with
     | Some d -> getElementContent d
     | None -> None
-    in
-    { rawDocText = doc;
-      sinceVersion = lookupAttr "version" element
-    }
+  in
+  { rawDocText = doc;
+    sinceVersion = lookupAttr "version" element
+  }

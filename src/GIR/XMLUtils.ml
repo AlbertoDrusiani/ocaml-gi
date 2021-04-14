@@ -102,9 +102,9 @@ let subelements el =
 (* restituisce tutti i figli di un elemento che hanno come local name quello dato*)    
 (* string -> xml -> xml list *) (*TODO come viene gestito il namespace? Devo togliere ciò che c'è prima dei due punti?*)
 let childElemsWithLocalName n el =
-  prerr_endline ("childElemsWithLocalName, con name = " ^ n ^ " e elemento = " ^ Xml.tag el); 
-  let localNameMatch e = Xml.tag e = n in
-    List.filter localNameMatch (subelements el)
+  let localNameMatch e = 
+    Xml.tag e = n in
+  List.filter localNameMatch (subelements el)
 
 (* come sopra ma specificando anche il namespace *)    
 (* GIRXMLNamespace -> string -> xml -> xml list *)
@@ -133,7 +133,7 @@ let getElementContent el =
 let lookupAttr attr element =
     try
         Some (Xml.attrib element attr) (*TODO da capire come viene poi chiamata, per vedere se devo lasciare il namespace prima dei due punti*)
-    with Xml.No_attribute str -> prerr_endline ("Errore No_attribute: " ^ str); None
+    with Xml.No_attribute _ -> (*prerr_endline ("Errore No_attribute: " ^ str);*) None
 
 (*prendo il local name dell'attributo e ci piazzo davanti il namespace dato, e poi cerco*)
 (* GIRXMLNamespace -> string -> xml -> string option *)

@@ -3,7 +3,8 @@ open Enum
 type flags = Flags of enumeration
 
 
-let parseFlags el ns =
-  let n, enum = parseEnum el ns in
+let parseFlags ns el =
+  prerr_endline ("Inizio il parse Flags");
+  let n, enum = parseEnum ns el in
   n, Flags enum
 
