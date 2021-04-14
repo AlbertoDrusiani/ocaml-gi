@@ -39,7 +39,7 @@ type gir_info = {
     girNSName: string;
     girNSVersion: string;
     girAPIs: (GIR.BasicTypes.name*api) list;
-   (* girCTypes: *)
+    girCTypes: GIR.BasicTypes.name StringMap.t;
 }
 
 type gir_namespace = {
@@ -157,10 +157,12 @@ let parseInclude element =
     with Xml.No_attribute str -> prerr_endline ("Errore No_attribute: " ^ str); "0"
   in Some (name, version)
 
-(* xml -> string *)
+(* xml -> string option *)
 let parsePackage element =
   prerr_endline ("Inizio il parsing del package: " ^ Xml.attrib element "name");
-  Some (Xml.attrib element "name")
+  try
+   Some (Xml.attrib element "name")
+  with Xml.No_attribute _ -> None
 
 (* Map alias type -> gir_info_parse -> xml -> gir_info_parse *)
 let parseRootElement aliases info element =
@@ -179,10 +181,10 @@ let emptyGIRInfoParse =
 let parseGIRDocument aliases doc =
   List.fold_left (parseRootElement aliases) emptyGIRInfoParse (subelements doc)
 
-(* xml -> *)
+(* xml -> Set (string string) *)
 let documentListIncludes doc =
   let includes = childElemsWithLocalName "include" doc in
-  List.filter_map parseInclude includes
+  List.filter_map parseInclude includes |> List.to_seq |> StringSet.of_seq
 
 (*TODO troppi set e map, appena capisco come usarle la implemento*)
 (*let loadDependencies verbose requested loaded extraPaths rules =*)
@@ -200,7 +202,7 @@ let toGIRInfo info =
                  girNSName = ns.nsName;
                  girNSVersion = ns.nsVersion;
                  girAPIs = List.rev ns.nsAPIs;
-                 (*girCTypes = ns.nsCTypes;*)
+                 girCTypes = ns.nsCTypes |> List.to_seq |> StringMap.of_seq;
                }
   | [] -> Error "Found no valid namespace"
   | _ -> Error "Found multiple namespaces"
@@ -227,18 +229,13 @@ let run verbose ns version =
   prerr_endline ("PARSING COMPLETATO: " ^ ns);;
 
 
-run true "Atk" None;;
+run true "Gtk" None;;
 
 
 
 (*TODO baco trovato in: 
- * Gio alla line 9199 in cui il parameter con name=... non ha il type quindi ciocca
  * GdkPixBuf, un return-value non ha la transfer-ownership
- * Gfk-2.0, come sopra
- * GLib, come sopra
- * GObject, come Gio
- * Gtk-3.0, come Gio
- * Pango, come Gio
+ * Gdk-2.0, come sopra
  * *)
 
                       
