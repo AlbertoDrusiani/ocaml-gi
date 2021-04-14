@@ -74,7 +74,7 @@ let rec parseArrayInfo ns aliases typ =
 and parseType typ ns aliases =
     match parseTypeElements typ ns aliases with
     | [Some e] ->  e
-    | [] -> assert false
+    | [] -> assert false (*TODO molte librerie entrano qui, vuol dire che non c'è un tipo assegnato all'elemento*)
     | [None] -> assert false
     | _ -> assert false
 

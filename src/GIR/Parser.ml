@@ -84,7 +84,15 @@ let parseBool str =
 (* string -> xml -> xml list *)
 let parseChildrenWithLocalName n element =
     let introspectable e = 
-        ((lookupAttr "introspectable" e) != (Some "0")) && ((lookupAttr "shadowed-by" e) == None) in
+        (not (Option.equal (fun x y -> x = y) (lookupAttr "introspectable" e) (Some "0"))) && ((lookupAttr "shadowed-by" e) == None) in
+    (*TODO per debugging *)
+    let s = childElemsWithLocalName n element in
+    let rec f l =
+      match l with
+      | [] -> []
+      | x:: xs -> prerr_endline ("L'elemento con name = " ^ (match lookupAttr "name" x with | Some x -> x | None -> "None") ^ 
+                                 " ha introspectable = " ^ (match lookupAttr "introspectable" x with | Some x -> x | None -> "None") ^ " e check = " ^ string_of_bool (introspectable x)); f xs
+    in let _ = f s in
     List.filter introspectable (childElemsWithLocalName n element)
 
 
@@ -95,7 +103,7 @@ let parseAllChildrenWithLocalName n element =
 
 (* GIRXMLNamespace -> string -> xml list *)    
 let parseChildrenWithNSName ns n element =
-    let introspectable e = (lookupAttr "introspectable" e) != (Some "0") in
+    let introspectable e = (not (Option.equal (fun x y -> x = y) (lookupAttr "introspectable" e) (Some "0"))) in
     List.filter introspectable (childElemsWithNSName ns n element)
 
 

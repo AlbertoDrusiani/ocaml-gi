@@ -22,8 +22,19 @@ module Alias = struct
     | c -> c
 end
 
+module StringString = struct
+  type t = string*string
+  let compare (str1, str2) (str3, str4) =
+    match Stdlib.compare str1 str3 with
+    | 0 -> Stdlib.compare str2 str4
+    | c -> c
+end
 
 module AliasMap = Map.Make(Alias)
+
+module StringMap = Map.Make(String)
+
+module StringSet = Set.Make(StringString)
 
 type basic_type =
     | TBoolean

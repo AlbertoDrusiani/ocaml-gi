@@ -27,8 +27,8 @@ let parseInstanceArg ns aliases el =
 
 
 let parseMethod ns aliases mType el =
-  prerr_endline ("Inizio il parse Method");
   let name_ = parseName ns el in
+  prerr_endline ("Inizio il parse Method di nome: " ^ name_.name);
   let shadows = queryAttr "shadows" el in
   let exposedName = match shadows with
                     | Some n -> {name_ with name = n}
