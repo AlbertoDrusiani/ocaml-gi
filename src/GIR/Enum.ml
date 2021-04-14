@@ -47,7 +47,7 @@ let extractEnumStorageBytes values =
 
 (* xml -> string -> enum*)
 let parseEnum el ns =
-  let name = parseName el ns in
+  let name = parseName ns el in
   let ctype = parseCType el in
   let doc = parseDocumentation el in
   let deprecated = parseDeprecation el in

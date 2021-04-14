@@ -2,8 +2,8 @@
 open Util
 open GIR.BasicTypes
 
-
-
+(* move leading underscores to the end *)
+(* string -> string *)
 let rec sanitize s =
     let length = String.length s in
     let first = String.get s 0 in
@@ -19,13 +19,13 @@ let underscoresToHypens =
 let hyphensToUnderscores =
     Str.global_replace (Str.regexp "-") "_"
 
-
+(* string -> string *)
 let camelCaseToSnakeCase s =
     let explode = List.init (String.length s) (String.get s) in
     let f c =
-        match Char.uppercase_ascii c with
-        | 'c' -> "_" ^ String.lowercase_ascii (String.make 1 c) (*FIXME da cambiare c char con c variabile*)
-        | _ -> String.make 1 c
+        match c == Char.uppercase_ascii c with
+        | true -> "_" ^ String.lowercase_ascii (String.make 1 c) (*FIXME da cambiare c char con c variabile*)
+        | false -> String.make 1 c
     in let rec g e =
         match e with
         | [] -> []
@@ -33,6 +33,7 @@ let camelCaseToSnakeCase s =
     in String.concat "" (g explode)
 
 
+(* string -> string list *)
 let splitCamelCase t =
     let rec splitCamelCase' l acc = 
         match l, acc with
@@ -47,7 +48,8 @@ let splitCamelCase t =
 let hyphensToCamelCase s =
     String.split_on_char '-' s |> List.map ucFirst |> String.concat ""
 
-
+(* turn a name from snake_case to CamelCase, hnadling underscores *)
+(* string -> string *)
 let underscoresToCamelCase s =
     let normalize n =
         match n with
@@ -55,7 +57,8 @@ let underscoresToCamelCase s =
         | n -> n
     in String.split_on_char '_' s |> List.map ucFirst |> List.map normalize |> String.concat ""
     
-
+(* turn the given identifier into lower camelCase *)
+(* string -> string *)
 let lowerSymbol s =
     match underscoresToCamelCase (sanitize s) with
     | "" -> "Errore in lowerSymbol: empty name"
@@ -64,10 +67,7 @@ let lowerSymbol s =
  
 let lowerName n =
     match n with
-    | {namespace = _; name = s} -> 
-            match s with
-            | Some s -> lowerSymbol s
-            | None -> "Errore in lowerName"
+    | {namespace = _; name = s} -> lowerSymbol s
 
 
 let escapeOCamlReserved s =
@@ -89,51 +89,25 @@ let escapeOCamlReserved s =
 
 let ocamlIdentifier n =
     match n with
-    |  { namespace = _; name = nm} -> 
-            match nm with
-            | Some s -> camelCaseToSnakeCase s |> escapeOCamlReserved
-            | None -> "Errore in ocamlIdentifier"
+    |  { namespace = _; name = nm} ->  camelCaseToSnakeCase nm |> escapeOCamlReserved
 
 
 let ocamlIdentifierNs n =
     match n with
-    | { namespace = ns; name = nm;} -> 
-            match nm with 
-            | Some s ->  (camelCaseToSnakeCase (ns ^ s) |> escapeOCamlReserved)
-            | None -> "Errore in ocamlIdentifierNs"
+    | { namespace = ns; name = nm;} ->   (camelCaseToSnakeCase (ns ^ nm) |> escapeOCamlReserved)
 
 
  
 let nsOCamlType currNs n =
     match n, currNs with
-    | { namespace = ns; name = nm;}, currNs when ns == currNs -> 
-            begin
-            match nm with
-            | Some s -> (s ^ "T.t")
-            | None -> "Errore in nsOCamlType 1"
-            end
-    | { namespace = ns; name = nm;}, _ -> 
-            begin
-            match nm with
-            | Some s -> ("GI" ^ ns ^ "." ^ s ^ "T.t")
-            | None -> "Errore in nsOCamlType 2"
-            end
+    | { namespace = ns; name = nm;}, currNs when ns == currNs -> nm ^ "T.t"
+    | { namespace = ns; name = nm;}, _ -> "GI" ^ ns ^ "." ^ nm ^ "T.t"
 
 
 let nsOCamlO currNs n =
     match n, currNs with
-    | {namespace = ns; name = nm;}, currNs when ns == currNs ->
-            begin
-                match nm with
-                | Some s -> "#" ^ s ^ "T." ^ (ocamlIdentifier n) ^ "_o"
-                | None -> "Errore in nsOCamlO"
-            end
-    | {namespace = ns; name = nm;}, _ ->
-            begin
-                match nm with
-                | Some s -> "#GI" ^ ns ^ "." ^ s ^ "T." ^ (ocamlIdentifier n) ^ "_o"
-                | None -> "Errore in nsOcamlO"
-            end
+    | {namespace = ns; name = nm;}, currNs when ns == currNs -> "#" ^ nm ^ "T." ^ (ocamlIdentifier n) ^ "_o"
+    | {namespace = ns; name = nm;}, _ -> "#GI" ^ ns ^ "." ^ nm ^ "T." ^ (ocamlIdentifier n) ^ "_o"
 
 let signalOcamlName s =
     hyphensToUnderscores s |> escapeOCamlReserved
@@ -149,10 +123,7 @@ let cGIPrefix = "GI_"
 
 let enumVal n =
     match n with
-    | {namespace = ns; name = nm;} -> 
-        match nm with
-        | Some nm -> cGIPrefix ^ ns ^ nm ^ "_val"
-        | None -> "Errore in enumVal"
+    | {namespace = ns; name = nm;} -> cGIPrefix ^ ns ^ nm ^ "_val"
 
 
 let flagsVal n =
@@ -165,25 +136,16 @@ let optFlagsVal n =
 
 let valEnum n =
     match n with
-    | {namespace = ns; name = nm;} ->
-        match nm with
-        | Some nm -> cGIPrefix ^ "Val_" ^ ns ^ nm
-        | None -> "Errore in valEnum"
+    | {namespace = ns; name = nm;} -> cGIPrefix ^ "Val_" ^ ns ^ nm
 
 let interfaceVal n =
     match n with
-    | {namespace = ns; name = nm;} ->
-        match nm with
-        | Some nm -> ns ^ nm ^ "_val"
-        | None -> "Errore in interfaceVal"
+    | {namespace = ns; name = nm;} -> ns ^ nm ^ "_val"
 
 
 let valInterface n =
     match n with
-    | {namespace = ns; name = nm;} ->
-        match nm with
-        | Some nm -> "Val_" ^ ns ^ nm
-        | None -> "Errore in valInterface"
+    | {namespace = ns; name = nm;} -> "Val_" ^ ns ^ nm
 
 
 let objectVal = interfaceVal

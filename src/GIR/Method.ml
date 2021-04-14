@@ -1,5 +1,5 @@
-(*open Arg
-open Callable*)
+open Arg
+open Callable
 open Parser
 open BasicTypes
 
@@ -14,36 +14,38 @@ type method_ml = {
     methodSymbol: string;
     methodType: method_type;
     methodMovedTo: string option;
-    (*methodCallable: callable;*)
+    methodCallable: callable;
     }
 
-(*TODO da capire la solita questione di parseChildren con i parser vari*)
-(*let parseInstanceArg el ns =
- (* let parseInstPars el ns =*)
-    List.map ((List.map parseArg (parseChildrenWithLocalName "instance-parameters" el))) ns
-  *)
+let parseInstanceArg ns el =
+  let parseInstPars = parseChildrenWithLocalName "parameters" el in
+  let instanceInfo = List.map (parseChildrenWithLocalName "instance-parameter") parseInstPars in
+  match instanceInfo with
+  | [[inst]] -> parseArg ns inst
+  | [] -> assert false
+  | _ -> assert false
 
 
-let parseMethod el ns mType =
-  let name_ = parseName el ns in
+let parseMethod ns mType el =
+  let name_ = parseName ns el in
   let shadows = queryAttr "shadows" el in
   let exposedName = match shadows with
                     | Some n -> {name_ with name = n}
                     | None -> name_
- (* in let callable =
+  in let callable =
        if mType != OrdinaryMethod
        then parseCallable el ns
        else
          let c = parseCallable el ns in
-         let instanceArg = parseInstanceArg el ns in
-         { c with args = instanceArg::(c.args)}*)
+         let instanceArg = parseInstanceArg ns el in
+         { c with args = instanceArg::(c.args)}
   in let symbol = getAttrWithNamespace CGIRNS "identifier" el in
   let movedTo = queryAttr "moved-to" el in
   { methodName = exposedName;
     methodSymbol = symbol;
     methodType = mType;
     methodMovedTo = movedTo;
-    (*methodCallable = callable;*)
+    methodCallable = callable;
   }
 
 

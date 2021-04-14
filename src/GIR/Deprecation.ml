@@ -7,6 +7,7 @@ type deprecation_info = {
 
 (* xml -> _DeprecationInfo option *)
 let queryDeprecated element =
+    prerr_endline ("Inizio il parsing Deprecation");
     try 
         let _ = lookupAttr "deprecated" element in (*la lookup attr può restituire un'eccezione No_Attribute*)
         let version = lookupAttr "deprecated-version" element in

@@ -1,5 +1,5 @@
 open Allocation
-(*open Method*)
+open Method
 open Property
 open Signal
 open Parser
@@ -16,31 +16,31 @@ type interface ={
     ifPrerequisites: name list;
     ifProperties: property list;
     ifSignals: signal list;
-    (*ifMethods: method_ml list;*)
+    ifMethods: method_ml list;
     ifAllocationInfo: allocation_info;
     ifDeprecated: deprecation_info option;
     }
 
 
 let parseInterface el ns =
-  let name = parseName el ns in
-  let props = List.map (fun x -> x ns) (List.map parseProperty (parseChildrenWithLocalName "property" el)) in
-  let signals = List.map (fun x -> x ns) (List.map parseSignal (parseChildrenWithNSName GLibGIRNS "signal" el)) in
+  let name = parseName ns el in
+  let props = List.map (parseProperty ns) (parseChildrenWithLocalName "property" el) in
+  let signals = List.map (parseSignal ns) (parseChildrenWithNSName GLibGIRNS "signal" el) in
   let typeInit = queryAttrWithNamespace GLibGIRNS "get-type" el in
-  (*let methods =
-  let functions =
-  let constructors =*)
+  let methods = List.map (parseMethod ns OrdinaryMethod) (parseChildrenWithLocalName "method" el) in
+  let functions = List.map (parseMethod ns MemberFunction) (parseChildrenWithLocalName "function" el) in
+  let constructors = List.map (parseMethod ns Constructor) (parseChildrenWithLocalName "constructor" el) in
   let deprecated = parseDeprecation el in
   let doc = parseDocumentation el in
   let ctype = queryCType el in
   name,
   { ifProperties = props;
-    ifPrerequisites = [{name="prova"; namespace="prova"}]; (*TODO mette error*)
+    ifPrerequisites = [{name="dummy"; namespace="dummy"}]; (*TODO bomba, dummy value*)
     ifSignals = signals;
     ifTypeInit = typeInit;
     ifCType = ctype;
     ifDocumentation = doc;
-    (*ifMethods = constructors @ methods @ functions;*)
+    ifMethods = constructors @ methods @ functions;
     ifAllocationInfo = unknownAllocationInfo;
     ifDeprecated = deprecated;
   }

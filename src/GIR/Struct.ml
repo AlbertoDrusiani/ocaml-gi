@@ -1,6 +1,6 @@
 open Allocation
 open Field
-(*open Method*)
+open Method
 open Parser
 open BasicTypes
 open Type
@@ -17,14 +17,14 @@ type struct_ml = {
     structIsDisguised: bool;
     structForceVisible: bool;
     structFields: field list;
-   (* structMethods: method_ml list;*)
+    structMethods: method_ml list;
     structDeprecated: deprecation_info option;
     structDocumentation: documentation;
 }
 
 
 let parseStruct el ns =
-  let name = parseName el ns in
+  let name = parseName ns el in
   let deprecated = parseDeprecation el in
   let doc = parseDocumentation el in
   let structFor = 
@@ -37,22 +37,20 @@ let parseStruct el ns =
   (*TODO valore settato nei file di overrides, lasciamo così fino a che non arriviamo quel punto*)
   let forceVisibile = optionalAttr "haskell-gi-force-visible" false el parseBool in
   let fields = parseFields el ns in
-  (*TODO solito problema della parseChildrenWithLocalName
-  let constructors =
-  let methods =
-  let functions =
-    *)
+  let constructors = List.map (parseMethod ns Constructor) (parseChildrenWithLocalName "constructor" el) in
+  let methods = List.map (parseMethod ns OrdinaryMethod) (parseChildrenWithLocalName "method" el) in
+  let functions = List.map (parseMethod ns MemberFunction) (parseChildrenWithLocalName "function" el) in
   name,
-  { structIsBoxed = true; (*TODO qua mette un error, non ho capito cosa serva*)
+  { structIsBoxed = true; (*TODO solita bomba, per ora dummy value*)
     structAllocationInfo = unknownAllocationInfo;
     structTypeInit = typeInit;
     structCType = maybeCType;
-    structSize = 0; (*TODO anche qua mette un error*)
+    structSize = 0; (*TODO bomba, metto dummy value*)
     gtypeStructFor = structFor;
     structIsDisguised = disguised;
     structForceVisible = forceVisibile;
     structFields = fields;
-    (*structMethods = constructor @ methods @ functions;*)
+    structMethods = constructors @ methods @ functions;
     structDeprecated = deprecated;
     structDocumentation = doc;
   }

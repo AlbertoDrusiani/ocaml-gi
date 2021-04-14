@@ -4,7 +4,6 @@ open Documentation
 open XMLUtils
 
 
-(*module KnownAliases = Map.make(String)*)
 
 (* xml -> string *)
 let elementDescription element =
@@ -17,10 +16,12 @@ let nameInCurrentNS ns n =
     { namespace = ns;  name = n;}
 
 
-(*let resolveQualifiedTypeName name knownAliases =
-    match a*)
-(*TODO non so fare le mappe*)
-
+(* name -> Map alias type -> type *)
+let rec resolveQualifiedTypeName name knownAliases =
+    match AliasMap.find (Alias name) knownAliases with
+    | Some (TInterface n) -> resolveQualifiedTypeName n knownAliases
+    | Some t -> t
+    | None -> TInterface name
 
 (* string -> xml -> string *)
 let getAttr attr element =
@@ -56,7 +57,7 @@ let qualifyName n ns =
     | _ -> assert false
 
 (* xml -> string -> BasicTypes.name *)
-let parseName element ns =
+let parseName ns element =
     qualifyName (getAttr "name" element) ns
 
 (* xml -> _DeprecationInfo option *)
@@ -81,7 +82,7 @@ let parseBool str =
    
 
 (* string -> xml -> xml list *)
-let parseChildrenWithLocalName n element = (*TODO va sistemata *)
+let parseChildrenWithLocalName n element =
     let introspectable e = 
         ((lookupAttr "introspectable" e) != (Some "0")) && ((lookupAttr "shadowed-by" e) == None)
     in List.filter introspectable (childElemsWithLocalName n element)

@@ -10,8 +10,9 @@ type callback = {
     }
 
 
-let parseCallback el ns =
-  let name = parseName el ns in
+let parseCallback ns el =
+  prerr_endline ("Inizio il parse Callback");
+  let name = parseName ns el in
   let callable = parseCallable el ns in
   let ctype = queryCType el in
   let doc = parseDocumentation el in
@@ -21,23 +22,3 @@ let parseCallback el ns =
     cbDocumentation = doc;
   }
 
-
-(*module GI = GObject_introspection
-
-open Callable
-open BasicTypes
-
-type callback = { 
-    cbCallable: callable;
-   (* cbCType: string option;*)
-   (* cbDocumentation: documentation;*)
-    }
-
-
-let parseCallback c =
-    prerr_endline("pppppppppp CALLBACK PPPPPPPPPPPP");
-    let name = GI.Callable_info.to_baseinfo c |> getName in
-    (name, 
-    { cbCallable = parseCallable c;})
-
-*)

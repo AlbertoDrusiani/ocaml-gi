@@ -74,13 +74,14 @@ and gir_rule =
 
 (* map alias type -> gir_namespace -> xml -> gir_namespace *)
 let parseNSElement (*aliases*) ns element =
+  prerr_endline ("Inizio il parsing di un NSElement: " ^ Xml.tag element ^ " con name = " ^ Xml.attrib element "name");
   let parse name api =
     let maybeCType = match lookupAttrWithNamespace CGIRNS "type" element with
                      | Some ctype -> (ctype, name) :: ns.nsCTypes
                      | None -> ns.nsCTypes
     in {ns with nsAPIs = (name, api)::ns.nsAPIs; nsCTypes = maybeCType} in 
   match lookupAttr "introspectable" element with
-  | Some "0" -> ns
+  | Some "0" -> prerr_endline ("Elemento da NON parsare"); ns
   | _ -> 
     match localName (Xml.tag element) with
     | "alias" -> ns
@@ -101,7 +102,7 @@ let parseNSElement (*aliases*) ns element =
                         | (name, api) -> parse name (APIFunction api)
                      end
     | "callback" -> begin
-                     match parseCallback element ns.nsName with
+                     match parseCallback ns.nsName element with
                         | (name, api) -> parse name (APICallback api)
                      end
     | "record" -> begin
@@ -127,9 +128,8 @@ let parseNSElement (*aliases*) ns element =
 (* xml -> map alias type -> gir_namespace*)
 let parseNamespace element (*aliases*) =
   let name = Xml.attrib element "name" in
-  prerr_endline "parseNamespace 1";
+  prerr_endline ("Inizio il parsing del namespace: " ^ name);
   let version = Xml.attrib element "version" in
-  prerr_endline "parseNamespace 2";
   let ns = { nsName = name;
              nsVersion = version;
              nsAPIs = [];
@@ -139,30 +139,31 @@ let parseNamespace element (*aliases*) =
 
 (* xml ->  string*string option *)
 let parseInclude element =
-  prerr_endline ("parseInclude API.ml riga 142:" ^ (Xml.tag element));
+  prerr_endline ("Inizio la parseIncude sull'elemento " ^ (Xml.tag element) ^ ", con name=" ^ (Xml.attrib element "name"));
   let name =
-    try 
+    prerr_endline ("provo a prendere il name");
+    try
      let n = Xml.attrib element "name" in
      n (*TODO ci sono un po' di funzioni che in Haskell restituiscono option,
                          da tenere a mente per gestione errori con eccezioni nella libreria xml,
                          per ora forzo a restare aderente ad Haskell aggiungendo Some*)
-    with Xml.No_attribute str -> prerr_endline ("parseInclude: API.ml riga 149: " ^ str); "no_name"
+    with Xml.No_attribute str -> prerr_endline ("Errore No_attribute: " ^ str); "no_name"
   in let version =
-    try (*TODO tutto bacatissimo PER ORA*)
-     prerr_endline ("parseInclude: API.ml riga 152");
-     let v = Xml.attrib element "version" in
-     prerr_endline ("parseInclude: API.ml riga 154");
-     v
-    with Xml.No_attribute str -> prerr_endline ("parseInclude: API.ml riga 156" ^ str); "0"
+    try (*TODO (string*string) option o string option *string option*)
+      prerr_endline ("provo a prendere la version");
+      let v = Xml.attrib element "version" in
+      v
+    with Xml.No_attribute str -> prerr_endline ("Errore No_attribute: " ^ str); "0"
   in Some (name, version)
 
 (* xml -> string *)
 let parsePackage element =
+  prerr_endline ("Inizio il parsing del package: " ^ Xml.attrib element "name");
   Some (Xml.attrib element "name")
 
 (* gir_info_parse -> xml -> gir_info_parse *)
 let parseRootElement (*aliases*) info element =
-  prerr_endline ("parseRootElement: " ^ (Xml.tag element));
+  prerr_endline ("Inizio il parseRootElement: " ^ (Xml.tag element));
   match localName (Xml.tag element) with
   | "include" -> {info with girIPIncludes = parseInclude element :: info.girIPIncludes;}
   | "package" -> {info with girIPPackage = parsePackage element :: info.girIPPackage;}

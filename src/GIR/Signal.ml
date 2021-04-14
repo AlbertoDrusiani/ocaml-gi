@@ -12,7 +12,7 @@ type signal = {
     }
 
 
-let parseSignal el ns =
+let parseSignal ns el =
   let n = getAttr "name" el in
   let detailed = optionalAttr "detailed" false el parseBool in
   let deprecated = parseDeprecation el in

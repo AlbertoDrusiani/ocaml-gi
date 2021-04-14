@@ -10,7 +10,7 @@ type function_ml = {
 
 
 let parseFunction el ns =
-  let name_ = parseName el ns in
+  let name_ = parseName ns el in
   let shadows = queryAttr "shadows" el in
   let exposedName = 
     begin

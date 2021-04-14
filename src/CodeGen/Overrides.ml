@@ -11,3 +11,6 @@ module MapNamesText = Map.Make(struct type t = name let compare = compare end)
    
 
 *)
+
+type overrides =
+  | Prova of string
