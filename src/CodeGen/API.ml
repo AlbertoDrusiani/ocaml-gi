@@ -19,7 +19,7 @@ open GIR.Repository
 open GIR.Struct
 open GIR.Union
 open GIR.XMLUtils
-
+open GIR.Alias
 
 
 
@@ -59,9 +59,9 @@ type gir_path =
   gir_node_spec list
 
 and gir_node_spec =
-  | GIRNames of gir_name_tag
+  | GIRNamed of gir_name_tag
   | GIRType of string
-  | GIRTypeName of string*gir_name_tag
+  | GIRTypedName of string*gir_name_tag
 
 and gir_name_tag =
   | GIRPlainName of string
@@ -128,41 +128,30 @@ let parseNSElement aliases ns element =
 
 (* map alias type -> xml -> gir_namespace*)
 let parseNamespace aliases element =
-  let name = Xml.attrib element "name" in
-  prerr_endline ("Inizio il parsing del namespace: " ^ name);
-  let version = Xml.attrib element "version" in
-  let ns = { nsName = name;
-             nsVersion = version;
+  let name = lookupAttr "name" element in
+  let version = lookupAttr "version" element in
+  if Option.is_none name || Option.is_none version 
+  then None
+  else
+   let _ =  prerr_endline ("Inizio il parsing del namespace: " ^ Option.get name) in
+   let ns = { nsName = Option.get name;
+             nsVersion = Option.get version;
              nsAPIs = [];
              nsCTypes = [];
            }
-  in Some (List.fold_left (parseNSElement aliases) ns (subelements element))
+   in Some (List.fold_left (parseNSElement aliases) ns (subelements element))
 
 (* xml ->  string*string option *)
 let parseInclude element =
-  prerr_endline ("Inizio la parseIncude sull'elemento " ^ (Xml.tag element) ^ ", con name=" ^ (Xml.attrib element "name"));
-  let name =
-    prerr_endline ("provo a prendere il name");
-    try
-     let n = Xml.attrib element "name" in
-     n (*TODO ci sono un po' di funzioni che in Haskell restituiscono option,
-                         da tenere a mente per gestione errori con eccezioni nella libreria xml,
-                         per ora forzo a restare aderente ad Haskell aggiungendo Some*)
-    with Xml.No_attribute str -> prerr_endline ("Errore No_attribute: " ^ str); "no_name"
-  in let version =
-    try (*TODO (string*string) option o string option *string option*)
-      prerr_endline ("provo a prendere la version");
-      let v = Xml.attrib element "version" in
-      v
-    with Xml.No_attribute str -> prerr_endline ("Errore No_attribute: " ^ str); "0"
-  in Some (name, version)
+  let name = lookupAttr "name" element in
+  let version = lookupAttr "version" element in
+  if Option.is_none name || Option.is_none version
+  then None
+  else Some (Option.get name, Option.get version)
 
 (* xml -> string option *)
 let parsePackage element =
-  prerr_endline ("Inizio il parsing del package: " ^ Xml.attrib element "name");
-  try
-   Some (Xml.attrib element "name")
-  with Xml.No_attribute _ -> None
+   lookupAttr "name" element
 
 (* Map alias type -> gir_info_parse -> xml -> gir_info_parse *)
 let parseRootElement aliases info element =
@@ -184,16 +173,111 @@ let parseGIRDocument aliases doc =
 (* xml -> Set (string string) *)
 let documentListIncludes doc =
   let includes = childElemsWithLocalName "include" doc in
-  List.filter_map parseInclude includes |> List.to_seq |> StringSet.of_seq
+  List.filter_map parseInclude includes |> List.to_seq |> StringStringSet.of_seq
 
-(*TODO troppi set e map, appena capisco come usarle la implemento*)
-(*let loadDependencies verbose requested loaded extraPaths rules =*)
+(* gir_name_tag -> Map XMLUtils.name string -> XMLUtils.name -> bool *)
+let lookupAndMatch tag attrs attr =
+  match XMLNameMap.find_opt attr attrs with
+  | Some s ->
+    begin
+     match tag with
+     | GIRPlainName pn -> s = pn
+     | GIRRegex r -> s = r (*TODO qua haskell usa ~=, roba per regex, da capire la semantica*)
+    end
+  | None -> false
+
+(* GIRNodeSpec -> xml -> bool *)
+let specMatch gn el =
+  match gn, el with
+  | GIRType t, e -> localName (Xml.tag e) = t
+  | GIRNamed name, e -> 
+    lookupAndMatch name (List.map attribute_to_name_map (Xml.attribs e) |> List.to_seq |> XMLNameMap.of_seq) (xmlLocalName "name")
+  | GIRTypedName (t, name), e -> 
+    (localName (Xml.tag e) = t) && (lookupAndMatch name (List.map attribute_to_name_map (Xml.attribs e) |> List.to_seq |> XMLNameMap.of_seq) (xmlLocalName "name"))
+
+(*gir_path*Xml.name -> string -> xml -> xml *)
+let rec girSetAttr gpn newVal n =
+  match gpn, newVal, n with
+  | (spec::rest, attr), newVal, n ->
+    if specMatch spec n
+    then
+      match rest with
+      | [] -> Xml.Element (Xml.tag n, (name_to_string attr, newVal)::(Xml.attribs n), Xml.children n)
+      | _ -> Xml.Element (Xml.tag n, Xml.attribs n, List.map (girSetAttr (rest, attr) newVal) (Xml.children n))
+    else n
+  | _, _, n -> n
+
+(* gir_path -> Xml.name -> xml -> xml *)
+let rec girAddNode gp newNode n =
+  match gp, newNode, n with
+  | (spec::rest), newNode, n ->
+    if specMatch spec n 
+    then
+      match rest with
+      | [] ->
+        let newElement = Xml.Element (name_to_string newNode, [], []) in
+        (*TODO da capire se devo filtrare i PCData, se sta roba funzia mi regalo il divano nuovo *)
+        let nodeNames = List.map (fun x -> localName (Xml.tag x)) (subelements n) in
+        if List.exists (fun x -> x = (newNode.nameLocalName)) nodeNames
+        then n
+        else Xml.Element (Xml.tag n, Xml.attribs n, (Xml.children n) @ [newElement])
+      | _ -> Xml.Element (Xml.tag n, Xml.attribs n, List.map (girAddNode rest newNode) (Xml.children n))
+    else n
+  | _, _, n -> n
+
+(* gir_path -> xml -> xml option *)
+let rec girDeleteNodes gp el =
+  match gp with
+  | (spec::rest) ->
+    if specMatch spec el
+    then
+      match rest with
+      | [] -> None
+      | _ -> Some (Xml.Element (Xml.tag el, Xml.attribs el, List.filter_map (girDeleteNodes rest) (Xml.children el)))
+    else Some el
+  | _ -> Some el
+
+
+(* gir_rule list -> xml -> xml *)
+let fixupGIR (*rules*) elem =
+  (*let applyGIRRule n girsetattr =
+    match girsetattr with
+    | GIRSetAttr ((path, attr), newVal) -> Some (girSetAttr (path, attr) newVal n)
+    | GIRAddNode (path, new_) -> Some (girAddNode path new_ n)
+    | GIRDeleteNode (path) -> girDeleteNodes path n*)
+  (*in*) Xml.Element (Xml.tag elem, 
+                  Xml.attribs elem, 
+                  (*List.filter_map TODO foldM in haskell (fun e -> List.fold_left applyGIRRule e rules)*) (Xml.children elem))
+
+(* gir_rule list -> xml -> xml *)
+let fixupGIRDocument (*rules*) doc =
+  fixupGIR (*rules*) doc
+
+(* bool -> Set (string*string) -> Map (string*string) xml -> string list -> GIRRule list -> Map (string*string) xml *)
+let rec loadDependencies verbose requested loaded (*extraPaths*) (*rules*) =
+  match StringStringSet.is_empty requested with
+  | true -> loaded
+  | false ->
+    (*TODO chissà se la trasformazione mantiene l'ordinamento...*)
+    let name, version = List.nth (StringStringSet.to_seq requested |> List.of_seq) 0 in
+    let doc = fixupGIRDocument (*rules*) (readGiRepository verbose name (Some version) (*extrapaths*)) in
+    let newLoaded = StringStringMap.add (name, version) doc loaded in
+    let keys = List.map (fun x -> match x with | (key, _) -> key) (StringStringMap.to_seq newLoaded |> List.of_seq) in
+    let loadedSet = StringStringSet.of_seq (List.to_seq keys) in
+    let newRequested = StringStringSet.union requested (documentListIncludes doc) in
+    let notYetLoaded = StringStringSet.diff newRequested loadedSet in
+    loadDependencies verbose notYetLoaded newLoaded (*extrapaths*) (*rules*)
+
+
+
+
+
 
 (* bool -> string -> string option -> xml *)
 let loadGIRFile verbose name version (*extraPaths*) (*rules*) =
   let doc = (*fixupGIRDocument rules*) readGiRepository verbose name version (*extraPaths*) in
-  (*let deps = loadDepenencies verbose doc *)
-  doc
+  (*let deps = loadDependencies verbose (documentListIncludes doc) StringStringMap.empty extrapaths rules *)
+  doc (*, deps *)
 
 (* gir_info_parse -> string*gir_info result*)
 let toGIRInfo info =
@@ -212,16 +296,39 @@ let toGIRInfo info =
 let loadRawGIRInfo verbose name version (*extrapaths*) =
   let doc = readGiRepository verbose name version (*extrapaths*) in
   match toGIRInfo (parseGIRDocument AliasMap.empty doc) with
-  | Error err -> prerr_endline ("loadRawGIRInfo, API.ml riga 211: " ^ err); assert false (*TODO error, da sistemare*)
+  | Error err -> prerr_endline ("loadRawGIRInfo, API.ml riga 211: " ^ err); assert false
   | Ok docGIR -> docGIR
 
 
 (* bool -> string -> string option -> gir_info*(gir_info list)*)
-(*let loadGIRInfo verbose name version (* extraPaths rules *) =
-  let doc = loadGIRFile verbose name version (* extraPaths rules *) in
-  (*let aliases = (*TODO*)*)
-  let parseDoc = toGIRInfo (parseGIRDocument (*aliases*) doc) in
-  let parseDeps =*)
+let loadGIRInfo ns verbose name version (* extraPaths rules *) =
+  let doc(*, deps*) = loadGIRFile verbose name version (* extraPaths rules *) in
+  (*TODO dummy per provare *)let deps = StringStringMap.empty in
+  let deps_elems = List.map (fun x -> match x with | (_, value) -> value) (StringStringMap.bindings deps) in
+  (*TODO da capire la questione alias, da dove lo passo? Per ora passo mappa vuota, magari è giusto*)
+  let f_union _ m1 _ =
+    Some m1
+  in let aliases = List.fold_left (AliasMap.union f_union) (AliasMap.empty) (List.map (documentListAliases ns AliasMap.empty) ([doc](*::deps_elem*))) in
+  let parsedDoc = toGIRInfo (parseGIRDocument aliases doc) in
+  let parsedDeps = List.map (toGIRInfo) (List.map (parseGIRDocument aliases) (deps_elems)) in
+  let combineErrors parsedDoc parsedDeps =
+    let doc = parsedDoc in
+    let deps = List.fold_left (fun x y ->
+        match y with
+        | Error _ -> Error _
+        | Ok _ -> match x with
+                  | Error _ -> Error _
+                  | Ok r -> Ok r) (Ok _) (parsedDeps)
+    in (doc, deps)
+  in match combineErrors with
+  | Error e -> assert false
+  | Ok (docGIR, depsGIR) ->
+    if docGIR.girNSName = name
+    then
+
+  
+
+   
 
 
 let run verbose ns version =

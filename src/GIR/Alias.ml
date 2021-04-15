@@ -20,7 +20,7 @@ let parseAlias ns aliases el =
 let parseAliases ns aliases el =
   List.map (parseAlias ns aliases) (parseChildrenWithLocalName "alias" el)
 
-(* string -> xml -> Map alias type *)
+(* string -> xml -> (alias, type) list *)
 let namespaceListAliases ns alias el =
   match lookupAttr "name" el with
   | None -> assert false
@@ -30,7 +30,7 @@ let namespaceListAliases ns alias el =
     (*TODO la riga sotto è commentata per semplificarmi la vita a fare la union del todo dopo*)
     (List.map addNS aliases) (*|> List.to_seq |> AliasMap.of_seq*)
 
-(* xml -> Map alias type*)
+(* string -> Map alias type  xml -> Map alias type*)
 let documentListAliases ns aliases doc =
   let namespaces = childElemsWithLocalName "namespace" doc in
   let l = List.flatten (List.map (namespaceListAliases ns aliases) namespaces) in

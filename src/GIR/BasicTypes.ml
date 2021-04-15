@@ -34,7 +34,11 @@ module AliasMap = Map.Make(Alias)
 
 module StringMap = Map.Make(String)
 
-module StringSet = Set.Make(StringString)
+module StringStringSet = Set.Make(StringString)
+
+module StringStringMap = Map.Make(StringString)
+
+module StringSet = Set.Make(String)
 
 type basic_type =
     | TBoolean

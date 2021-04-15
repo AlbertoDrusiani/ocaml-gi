@@ -4,6 +4,16 @@ type name = {
     namePrefix: string option;
 }
 
+module XMLName = struct
+  type t = name
+  let compare {nameLocalName=nln1; nameNamespace=nns1; namePrefix=_} {nameLocalName=nln2; nameNamespace=nns2; namePrefix=_} =
+      match Stdlib.compare nns1 nns2 with
+      | 0 -> Stdlib.compare nln1 nln2
+      | c -> c
+end
+
+
+module XMLNameMap = Map.Make(XMLName)
 
 type _GIRXMLNamespace =
     | GLibGIRNS
@@ -37,6 +47,16 @@ let girXMLNamespaceToPrefix ns =
 (* string option -> string *)
 let prefixToGIRNamespace p =
     prefixToGIRXMLNamespace p |> girNamespace
+
+(*string option -> string*)
+let girNamespaceToPrefix ns =
+  match ns with
+  | Some "http://www.gtk.org/introspection/glib/1.0" -> "glib"
+  | Some "http://www.gtk.org/introspection/c/1.0" -> "c"
+  | Some "http://www.gtk.org/introspection/core/1.0" -> ""
+  | Some _ -> assert false
+  | None -> ""
+ 
 
 (*estrae il prefisso da un elemento o da un attributo*)
 (* string -> string option *)
@@ -85,6 +105,17 @@ let attribute_to_name attr =
     | (key, _) ->  {nameLocalName = localName key; 
                     nameNamespace = Some (get_prefix key |> prefixToGIRNamespace);
                     namePrefix = get_prefix key;}
+
+(* string*string -> name*string *)
+let attribute_to_name_map attr =
+  match attr with
+    | (key, value) ->  {nameLocalName = localName key; 
+                    nameNamespace = Some (get_prefix key |> prefixToGIRNamespace);
+                    namePrefix = get_prefix key;}, value
+
+(* name -> string *)
+let name_to_string name =
+  girNamespaceToPrefix name.nameNamespace ^ name.nameLocalName 
 
 (*prende un xml e restituisce None se non è un elemento*)    
 (* xml -> xml option*)
