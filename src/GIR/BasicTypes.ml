@@ -22,6 +22,14 @@ module Alias = struct
     | c -> c
 end
 
+module Name = struct
+  type t = name
+  let compare {namespace=ns1; name=nm1} {namespace=ns2; name=nm2} =
+    match Stdlib.compare ns1 ns2 with
+    | 0 -> Stdlib.compare nm1 nm2
+    | c -> c
+end
+
 module StringString = struct
   type t = string*string
   let compare (str1, str2) (str3, str4) =
@@ -31,6 +39,10 @@ module StringString = struct
 end
 
 module AliasMap = Map.Make(Alias)
+
+module NameMap = Map.Make(Name)
+
+module NameSet = Set.Make(Name)
 
 module StringMap = Map.Make(String)
 

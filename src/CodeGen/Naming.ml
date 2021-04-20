@@ -19,18 +19,21 @@ let underscoresToHypens =
 let hyphensToUnderscores =
     Str.global_replace (Str.regexp "-") "_"
 
+
+let explode s =
+  List.init (String.length s) (String.get s)
+
 (* string -> string *)
 let camelCaseToSnakeCase s =
-    let explode = List.init (String.length s) (String.get s) in
     let f c =
         match c == Char.uppercase_ascii c with
-        | true -> "_" ^ String.lowercase_ascii (String.make 1 c) (*FIXME da cambiare c char con c variabile*)
+        | true -> "_" ^ String.lowercase_ascii (String.make 1 c)
         | false -> String.make 1 c
     in let rec g e =
         match e with
         | [] -> []
         | x::xs -> f x :: g xs
-    in String.concat "" (g explode)
+    in String.concat "" (g (explode s))
 
 
 (* string -> string list *)
@@ -64,10 +67,27 @@ let lowerSymbol s =
     | "" -> "Errore in lowerSymbol: empty name"
     | n -> lcFirst n
 
- 
+
+let upperName nm =
+  underscoresToCamelCase (sanitize nm.name)
+
+
 let lowerName n =
     match n with
     | {namespace = _; name = s} -> lowerSymbol s
+
+(* (string -> bool) -> string -> (string*string)*)
+(*let span p t =
+  let exp = explode t in
+  let rec f l acc =
+    match l with
+    | [] -> acc
+    | (x::xs) as r -> 
+      try
+        let _ = p x in
+        f xs (acc ^ x, String.concat "" xs)
+      with Failure _ -> (acc, r)
+  in f exp ("", "")*)
 
 
 let escapeOCamlReserved s =
@@ -85,6 +105,8 @@ let escapeOCamlReserved s =
     | "method" -> "method_"
    (* | _ -> let (nums, text) = *) (*TODO da sistemare con span che non c'è in Ocaml*)
     | _ -> s
+
+
 
 
 let ocamlIdentifier n =

@@ -1,5 +1,5 @@
 (executable
-  (name API)
+  (name CodeGen)
   (libraries GIR)
 )
 

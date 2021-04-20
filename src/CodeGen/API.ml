@@ -20,7 +20,7 @@ open GIR.Struct
 open GIR.Union
 open GIR.XMLUtils
 open GIR.Alias
-
+(*open Foreign*)
 
 
 type api =
@@ -238,46 +238,51 @@ let rec girDeleteNodes gp el =
   | _ -> Some el
 
 
+let foldM_option f x l =
+  let g a b =
+    match a with
+    | None -> None
+    | Some a -> f a b
+  in List.fold_left g (Some x) l
+
 (* gir_rule list -> xml -> xml *)
-let fixupGIR (*rules*) elem =
-  (*let applyGIRRule n girsetattr =
+let fixupGIR rules elem =
+  let applyGIRRule n girsetattr =
     match girsetattr with
     | GIRSetAttr ((path, attr), newVal) -> Some (girSetAttr (path, attr) newVal n)
     | GIRAddNode (path, new_) -> Some (girAddNode path new_ n)
-    | GIRDeleteNode (path) -> girDeleteNodes path n*)
-  (*in*) Xml.Element (Xml.tag elem, 
+    | GIRDeleteNode (path) -> girDeleteNodes path n
+  in Xml.Element (Xml.tag elem, 
                   Xml.attribs elem, 
-                  (*List.filter_map TODO foldM in haskell (fun e -> List.fold_left applyGIRRule e rules)*) (Xml.children elem))
+                  List.filter_map (fun e -> foldM_option (applyGIRRule) e rules) (Xml.children elem))
+
 
 (* gir_rule list -> xml -> xml *)
-let fixupGIRDocument (*rules*) doc =
-  fixupGIR (*rules*) doc
+let fixupGIRDocument rules doc =
+  fixupGIR rules doc
 
 (* bool -> Set (string*string) -> Map (string*string) xml -> string list -> GIRRule list -> Map (string*string) xml *)
-let rec loadDependencies verbose requested loaded (*extraPaths*) (*rules*) =
+let rec loadDependencies verbose requested loaded (*extraPaths*) rules =
   match StringStringSet.is_empty requested with
   | true -> loaded
   | false ->
     (*TODO chissà se la trasformazione mantiene l'ordinamento...*)
     let name, version = List.nth (StringStringSet.to_seq requested |> List.of_seq) 0 in
-    let doc = fixupGIRDocument (*rules*) (readGiRepository verbose name (Some version) (*extrapaths*)) in
+    let doc = fixupGIRDocument rules (readGiRepository verbose name (Some version) (*extrapaths*)) in
     let newLoaded = StringStringMap.add (name, version) doc loaded in
     let keys = List.map (fun x -> match x with | (key, _) -> key) (StringStringMap.to_seq newLoaded |> List.of_seq) in
     let loadedSet = StringStringSet.of_seq (List.to_seq keys) in
     let newRequested = StringStringSet.union requested (documentListIncludes doc) in
     let notYetLoaded = StringStringSet.diff newRequested loadedSet in
-    loadDependencies verbose notYetLoaded newLoaded (*extrapaths*) (*rules*)
-
-
-
+    loadDependencies verbose notYetLoaded newLoaded (*extrapaths*) rules
 
 
 
 (* bool -> string -> string option -> xml *)
-let loadGIRFile verbose name version (*extraPaths*) (*rules*) =
-  let doc = (*fixupGIRDocument rules*) readGiRepository verbose name version (*extraPaths*) in
-  (*let deps = loadDependencies verbose (documentListIncludes doc) StringStringMap.empty extrapaths rules *)
-  doc (*, deps *)
+let loadGIRFile verbose name version (*extraPaths*) rules =
+  let doc = fixupGIRDocument rules (readGiRepository verbose name version (*extraPaths*)) in
+  let deps = loadDependencies verbose (documentListIncludes doc) StringStringMap.empty (*extrapaths*) rules in
+  doc, deps
 
 (* gir_info_parse -> string*gir_info result*)
 let toGIRInfo info =
@@ -299,36 +304,85 @@ let loadRawGIRInfo verbose name version (*extrapaths*) =
   | Error err -> prerr_endline ("loadRawGIRInfo, API.ml riga 211: " ^ err); assert false
   | Ok docGIR -> docGIR
 
+(*
+let foldM_result f x l =
+  let rec g a b =
+    match a with
+    | Error e -> Error e
+    | Ok a -> f a b
+  in List.fold_left g (Ok x) l
+*)
 
-(* bool -> string -> string option -> gir_info*(gir_info list)*)
-let loadGIRInfo ns verbose name version (* extraPaths rules *) =
-  let doc(*, deps*) = loadGIRFile verbose name version (* extraPaths rules *) in
-  (*TODO dummy per provare *)let deps = StringStringMap.empty in
+
+(*FIXME dovrebbe funzionare ma fa schifo, soluzioni con una fold?*)
+let check_sequence_result l =
+  let rec g l =
+    match l with
+    | [] -> Ok []
+    | x::xs -> 
+      match x with
+      | Ok _ -> g(xs)
+      | Error e -> Error e
+  in Result.is_ok (g l)
+
+
+
+
+(*let fixupGIRInfos doc deps =
+  let rec fixup fixer (doc, deps) =
+    let fixedDoc = fixAPIs fixer doc in
+    let fixedDeps = List.map (fixAPIs fixer) deps
+    in fixedDoc, fixedDeps
+
+  and fixAPIs fixer info =
+    let fixedAPIs = List.map (fixer ctypes) (info.girAPIs)
+    in {info with girAPIs = fixedAPIs}
+
+  and ctypes =
+    let f_union _ m1 _ =
+    Some m1
+    in List.fold_left (StringMap.union f_union) StringMap.empty (List.map (fun x -> x.girCTypes) (doc::deps))
+  
+  in fixup fixupUnion (doc, deps) |> fixup fixupStruct |> fixup fixupInterface
+*)
+
+
+(* string -> bool -> string -> string option -> gir_info*(gir_info list)*)
+let loadGIRInfo verbose name version (* extraPaths *) rules =
+  let doc, deps = loadGIRFile verbose name version (* extraPaths *) rules in
   let deps_elems = List.map (fun x -> match x with | (_, value) -> value) (StringStringMap.bindings deps) in
   (*TODO da capire la questione alias, da dove lo passo? Per ora passo mappa vuota, magari è giusto*)
   let f_union _ m1 _ =
     Some m1
-  in let aliases = List.fold_left (AliasMap.union f_union) (AliasMap.empty) (List.map (documentListAliases ns AliasMap.empty) ([doc](*::deps_elem*))) in
+  in let aliases = List.fold_left (AliasMap.union f_union) (AliasMap.empty) (List.map (documentListAliases name AliasMap.empty) ([doc](*::deps_elem*))) in
   let parsedDoc = toGIRInfo (parseGIRDocument aliases doc) in
   let parsedDeps = List.map (toGIRInfo) (List.map (parseGIRDocument aliases) (deps_elems)) in
   let combineErrors parsedDoc parsedDeps =
     let doc = parsedDoc in
-    let deps = List.fold_left (fun x y ->
-        match y with
-        | Error _ -> Error _
-        | Ok _ -> match x with
-                  | Error _ -> Error _
-                  | Ok r -> Ok r) (Ok _) (parsedDeps)
-    in (doc, deps)
-  in match combineErrors with
-  | Error e -> assert false
+    if check_sequence_result (parsedDeps) && Result.is_ok doc
+    then Ok (Result.get_ok doc, List.map (Result.get_ok) parsedDeps)
+    else Error "errore"
+  in match combineErrors parsedDoc parsedDeps with
+  | Error _ -> assert false
   | Ok (docGIR, depsGIR) ->
     if docGIR.girNSName = name
     then
+      let fixedDoc, fixedDeps = (*fixupGIRInfos*) docGIR, depsGIR in
+      fixedDoc, fixedDeps
+    else assert false
 
   
+(* TODO
+let g_type_interface_prerequisites =
+  foreign "g_type_interface_prerequisites" (
+*)
 
-   
+(*TODO
+let gtypeInterfaceListPrereqs =l
+*)
+
+(*TODO tutto il delirio dei fixup *)
+
 
 
 let run verbose ns version =
@@ -340,9 +394,5 @@ run true "Gtk" None;;
 
 
 
-(*TODO baco trovato in: 
- * GdkPixBuf, un return-value non ha la transfer-ownership
- * Gdk-2.0, come sopra
- * *)
 
                       

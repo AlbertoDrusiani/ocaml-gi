@@ -1,3 +1,4 @@
+
 (*implemento la take di libreria di Haskell*)
 (*take :: Num -> [a] -> [a] *)
 let rec take k xs = match xs with
@@ -52,7 +53,11 @@ let splitOn x xs =
     in go xs []
 
 
-(*let utf8ReadFile fname =*)
+let readFile fname =
+  let ch = open_in fname in
+  let s = really_input_string ch (in_channel_length ch) in
+  close_in ch;
+  s 
 
 (*mappa solo gli ultimi n elementi di una funzione*)
 let rec mapNth n fn l =
@@ -61,6 +66,15 @@ let rec mapNth n fn l =
     | n, fn, x::xs when n == 0 -> fn x :: xs
     | n, fn, x::xs -> x :: mapNth (n-1) fn xs
 
+
+(* stackoverflow https://stackoverflow.com/questions/56327912/how-to-remove-a-non-empty-directory-with-ocaml*)
+let rec removeDirectoryContents path = 
+  match Sys.is_directory path with
+  | true ->
+    Sys.readdir path |>
+    Array.iter (fun name -> removeDirectoryContents (Filename.concat path name));
+    Unix.rmdir path
+  | false -> Sys.remove path
 
 
 let range a b =

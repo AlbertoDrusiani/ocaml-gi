@@ -4,6 +4,20 @@ type module_path = {
     modulePathToList: string list;
 }
 
+module ModulePath = struct
+  type t = module_path
+  let rec compare {modulePathToList = x1} {modulePathToList = x2} =
+    match x1, x2 with
+    | [], [] -> 0
+    | _, [] -> 1
+    | [], _ -> -1
+    | x1::xs1, x2::xs2 ->
+      match Stdlib.compare x1 x2 with
+      | 0 -> compare {modulePathToList = xs1} {modulePathToList = xs2}
+      | c -> c
+end
+
+module ModulePathSet = Set.Make(ModulePath)
 
 
 let toModulePath p =
