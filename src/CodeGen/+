@@ -1,6 +1,6 @@
 open API
 open ModulePath
-open Naming
+(*open Naming*)
 (*open Util*)
 (*open ModulePath*)
 open GIR.BasicTypes
@@ -106,9 +106,10 @@ type code_gen_config = {
   (*c2hMap: TODO da implementare il modulo gtk-doc*) 
 }
 
-exception CGErrorNotImplemented of string
-exception CGErrorBadIntrospectionInfo of string
-exception CGErrorMissingInfo of string
+type cg_error =
+  | CGErrorNonImplemented of string
+  | CGErrorBadIntrospectionInfo of string
+  | CGErrorMissingInfo of string
 
 
 type named_tyvar =
@@ -177,152 +178,26 @@ let addSubmodule minfo mName smInfo =
 
 (*TODO qua viene fatta la runCodeGen e può sollevarsi un errore, gestisco in seguito*)
 (*FIXME sta roba è bacatissima sicuro, manca la gestione del cgstate e la runcodegen come funziona?*)
-(* code_gen_config -> cgstate -> module_info -> string -> (cfg * cgstate *)
-let submodule' (cfg, cgstate, minfo) mName =
+let submodule' minfo mName =
   let info = emptyModule ({modulePathToList = minfo.modulePath.modulePathToList @ [mName]}) in
-  cfg, cgstate, (addSubmodule minfo mName info)
+  addSubmodule minfo mName info
 
 
-(* code_gen_config*cgstate*module_info -> module_path -> (cfg * cgstate * minfo *)
-let rec submodule (cfg, cgstate, minfo) mPath =
+
+let rec submodule cfg cgstate minfo mPath =
   match mPath.modulePathToList with
-  | [] -> cfg, cgstate, minfo
-  | m::ms -> submodule' (submodule (cfg, cgstate, minfo) {modulePathToList = ms}) m
-
-
-let addCDep minfo dep =
-  {minfo with cDeps = StringSet.add dep (minfo.cDeps)}
-
-let findAPIByName cfg n =
-  let apis = cfg.loadedAPIs in
-  match NameMap.find_opt n apis with
-  | Some api -> api
-  | None -> assert false (*FIXME gestione errori*)
+  | [] -> minfo
+  | m::ms -> submodule' (submodule minfo {modulePathToList = ms}) m
 
 
 
-
-(* module_info -> code_token -> module_info *)
-let tellCode minfo c =
-  { minfo with moduleCode = Code (getCode(minfo.moduleCode) @ [c])}
-
-(* module_info -> string -> module_info *)
-let line minfo s =
-  tellCode minfo (Line s)
-
-
-(* module_info -> code_token -> module_info *)
-let tellGCode minfo c =
-  { minfo with gCode = Code (getCode(minfo.gCode) @ [c])}
-
-(* module_info -> string -> module_info *)
-let gline minfo s =
-  tellGCode minfo (Line s)
-
-(*TODO da fare*)
-(*let cBoot minfo = 
-
-let cline minfo l =
-  cBoot (line minfo l)
-*)
-
-(* module_info -> code_token -> module_info *)
 let tellHCode minfo c =
-  { minfo with hCode = Code (getCode(minfo.hCode) @ [c])}
+  match minfo.hCode with
+  | Code cd -> { minfo with hCode = Code (cd @  [c])}
 
-(* module_info -> string -> module_info *)
+
 let hline minfo s =
   tellHCode minfo (Line s)
-
-(* module_info -> code_token -> module_info *)
-let tellTCode minfo c =
-  { minfo with tCode = Code (getCode(minfo.tCode) @ [c]) }
-
-(* module_info -> string -> module_info *)
-let tline minfo s =
-  tellTCode minfo (Line s)
-
-
-let commentLine minfo t =
-  line minfo ("(* " ^ t ^ " *)")
-
-let blank minfo =
-  line minfo ""
-
-
-let nameToClassType n =
-  let ocamlId = ocamlIdentifier n in
-  String.concat "\n"
-    ["class type " ^ ocamlId ^ "_o = object";
-     "  method as_" ^ ocamlId ^ " : t Gobject.obj";
-     "end"]
-
-(* name list -> string *)
-let ifacesTypes n =
-  match n with
-  | [] -> ""
-  | xs -> " | `" ^ String.concat " | `" (List.map ocamlIdentifierNs xs)
-
-(* string -> string *)
-let typeDeclText t =
-  "type t = " ^ t
-
-(* name -> name option -> name list -> string *)
-let textToOCamlType n mn nl =
-  match n, mn, nl with
-  | {namespace = "GObject"; name = "Object"}, _, _ -> typeDeclText "[`giu]"
-  | {namespace = "Gtk"; name = "Widget"}, _, _ -> typeDeclText "[`giu | `widget]"
-  | n, None, ifaces -> 
-    typeDeclText ("[ " ^ ocamlIdentifierNs n ^ ifacesTypes ifaces ^ "]")
-  | n, (Some {namespace = "GObject"; name = "Object"}), ifaces ->
-    typeDeclText ("[`giu | `]" ^ ocamlIdentifierNs n ^ ifacesTypes ifaces ^ "]")
-  | n, (Some nm), ifaces when n.namespace = nm.namespace ->
-    typeDeclText  ("[" ^ nsOCamlType n.namespace nm ^ " | `" ^ ocamlIdentifierNs n ^ ifacesTypes ifaces ^ "]")
-  | n, Some pn, ifaces ->
-    typeDeclText ("[" ^ nsOCamlType n.namespace pn ^ " | `" ^ ocamlIdentifierNs n ^ ifacesTypes ifaces ^ "]")
-
-
-let getParent' api =
-  let rename n =
-    match n with
-    | Some {namespace = "GObject"; name = "InitiallyUnowned"} -> Some ({namespace = "GObject"; name = "Object"})
-    | x -> x
-  in match api with
-  | APIObject o -> rename o.objParent 
-  | _ -> None
-
-
-let rec instanceTree cfg n =
-  let api = findAPIByName cfg n in
-  match getParent' api with
-  | Some p -> p :: (instanceTree cfg p)
-  | None -> []
-
-(* code_gen_config -> module_info -> name -> module_info *)
-let addTypeFile cfg minfo n =
-  let api = findAPIByName cfg n in
-  match api with
-  | APIConst _ -> minfo
-  | APIFunction _ -> minfo
-  | APICallback _ -> minfo
-  | APIEnum _ -> minfo
-  | APIFlags _ -> minfo
-  | APIInterface _ ->
-    let step1 = tline minfo (textToOCamlType n None []) in
-    let step2 = tline step1 "" in
-    tline step2 (nameToClassType n)
-  | APIObject o ->
-    let parents = instanceTree cfg n in
-    let info = 
-      begin
-      match parents with
-       | [] -> tline minfo (textToOCamlType n None o.objInterfaces)
-       | parent::_ -> tline minfo (textToOCamlType n (Some parent) o.objInterfaces)
-      end
-    in let step1 = tline info "" in
-    tline step1 (nameToClassType n)
-  | APIStruct _ -> tline minfo "type t"
-  | APIUnion _ -> tline minfo "type t"
 
 
 
