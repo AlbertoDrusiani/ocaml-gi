@@ -1,5 +1,5 @@
 (executable
-  (name EnumFlags)
+  (name Object)
   (libraries GIR)
 )
 

@@ -30,7 +30,7 @@ let union_f _ v1 _ =
 
 (*per ora non considero gli overrides e le dipendenze*)
 (*string -> string -> bool -> ModuleInfo*)
-let genLibraryCode name version verbosity (*overrides*) =
+let genLibraryCode name version verbosity overrides =
   (*TODO dummy value, da implementare questa parte*)
   (*let ovs = defaultOverrides in*)
   let gir(*, girDeps*) = loadRawGIRInfo verbosity name (Some version) (*[]*) (*(ovs.girFixups)*) in
@@ -49,7 +49,7 @@ let genLibraryCode name version verbosity (*overrides*) =
 
 (* bool -> library -> unit *)
 let genBindings verbosity library =
-  (*let inheritedOverrides = [] in
+  let inheritedOverrides = [] in
   let outputDir = "bindings" ^ dir_sep ^ library.name in
   let dirExists = file_exists outputDir in
   begin
@@ -62,10 +62,10 @@ let genBindings verbosity library =
     | None -> None
   in let ovs =
     match givenOvs with
-      | Some x -> [x]
+      | Some x -> [x] @ inheritedOverrides
       | None -> inheritedOverrides
-  in *) let m (*, deps'*) = genLibraryCode library.name library.version verbosity (*ovs*) in
-  m
+  in let m, deps' = genLibraryCode library.name library.version verbosity ovs in
+  m, deps'
 
 
 

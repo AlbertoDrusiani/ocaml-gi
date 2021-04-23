@@ -7,6 +7,7 @@ open GIR.Struct
 open GIR.Union
 open Naming
 open Struct
+open EnumFlags
 
 (*let genFunction n f =*)
 

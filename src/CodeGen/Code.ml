@@ -122,6 +122,20 @@ type cg_state = {
 let emptyCGState =
   {cgsNextAvailableTyvar = SingleCharTyvar 'b'}
 
+let cleanInfo info =
+  { info with 
+    moduleCode = emptyCode;
+    bootCode = emptyCode;
+    cCode = emptyCode;
+    tCode = emptyCode;
+    hCode = emptyCode;
+    gCode = emptyCode;
+    submodules = StringMap.empty;
+    moduleDeps = StringSet.empty;
+    moduleExports = [];
+    qualifiedImports = ModulePathSet.empty;
+    }
+
 
 (*let evalCodeGen cfg apis mPath cg =
   let initialInfo = emptyModule mPath in
@@ -168,6 +182,8 @@ let rec mergeInfoState oldState newState =
 and mergeInfo oldInfo newInfo =
   let info = mergeInfoState oldInfo newInfo in
   { info with moduleCode = Code (getCode (oldInfo.moduleCode) @ getCode (newInfo.moduleCode))}
+
+
 
 let addSubmodule minfo mName smInfo =
   match StringMap.mem mName minfo.submodules with
@@ -219,12 +235,20 @@ let tellGCode minfo c =
 let gline minfo s =
   tellGCode minfo (Line s)
 
-(*TODO da fare*)
-(*let cBoot minfo = 
+(*let group' (cfg, cgstate, minfo) codeTeller blanker =*)
+  
+
+(*let group (cfg, cgstate, minfo) =
+  group' (cfg, cgstate, minfo) tellCode blank*)
+  
 
 let cline minfo l =
-  cBoot (line minfo l)
-*)
+  let info = cleanInfo minfo in
+  let info = line info l in
+  let code = info.moduleCode in
+  let minfo = mergeInfoState minfo info in
+  { minfo with cCode = Code ((getCode(minfo.cCode)) @ getCode(code))}
+
 
 (* module_info -> code_token -> module_info *)
 let tellHCode minfo c =
@@ -248,6 +272,43 @@ let commentLine minfo t =
 
 let blank minfo =
   line minfo ""
+
+let gblank minfo =
+  gline minfo ""
+
+
+let indent minfo f param =
+  let info = cleanInfo minfo in
+  let info = f info param in
+  let code = info.moduleCode in
+  let minfo = mergeInfoState minfo info in
+  minfo = tellCode minfo (Indent code)
+
+
+let gindent minfo f param =
+  let info = cleanInfo minfo in
+  let info = f info param in
+  let code = info.moduleCode in
+  let minfo = mergeInfoState minfo info in
+  minfo = tellGCode minfo (Indent code)
+
+
+let group minfo f param =
+  let info = cleanInfo minfo in
+  let info = f info param in
+  let code = info.moduleCode in
+  let minfo = mergeInfoState minfo info in
+  let minfo = tellCode minfo (Group code) in
+  blank minfo
+
+
+let ggroup minfo f param =
+  let info = cleanInfo minfo in
+  let info = f info param in
+  let code = info.moduleCode in
+  let minfo = mergeInfoState minfo info in
+  let minfo = tellGCode minfo (Group code) in
+  gblank minfo
 
 
 let nameToClassType n =
@@ -297,6 +358,10 @@ let rec instanceTree cfg n =
   match getParent' api with
   | Some p -> p :: (instanceTree cfg p)
   | None -> []
+
+
+let dotWithPrefix mp = dotModulePath mp
+
 
 (* code_gen_config -> module_info -> name -> module_info *)
 let addTypeFile cfg minfo n =

@@ -92,3 +92,21 @@ let upFirst s = ucFirst s
     in List.map inner s (range 0 (List.length(s) -1))*)
 
 let indentBy idx = String.make (2*idx) ' '
+
+
+let stripPrefix str prefix =
+  let regexp = Str.regexp ("/^" ^ prefix) in
+  let replaced = Str.replace_first regexp str "" in
+  if (prefix ^ replaced) = str
+  then Some replaced
+  else None
+
+
+let breakOnFirst str1 str2 =
+  let regexp = Str.regexp ("/"^str1) in
+  let splitted = Str.split regexp str2 in
+  if String.concat "" splitted = str2
+  then str2
+  else List.hd splitted
+
+

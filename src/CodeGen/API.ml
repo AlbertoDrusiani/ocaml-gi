@@ -6,7 +6,7 @@ open GIR.Callback
 open GIR.Constant
 (*open GIR.Deprecation*)
 open GIR.Enum
-(*open GIR.Field*)
+open GIR.Field
 open GIR.Flags
 open GIR.Function
 open GIR.Interface
@@ -21,7 +21,7 @@ open GIR.Union
 open GIR.XMLUtils
 open GIR.Alias
 (*open Foreign*)
-
+open LibGIRepository
 
 type api =
   | APIConst of constant
@@ -326,9 +326,75 @@ let check_sequence_result l =
   in Result.is_ok (g l)
 
 
+let fixupField offsetMap f =
+  { f with fieldOffset = 
+      match StringMap.find_opt f.fieldName offsetMap with
+      | None -> assert false
+      | Some o -> o.fieldInfoOffset}
 
 
-(*let fixupGIRInfos doc deps =
+let fixupUnionSizeAndOffsets nm u =
+  let size, infoMap = girUnionFieldInfo nm.namespace nm.name in
+  { u with unionSize= size; unionFields = List.map (fixupField infoMap) (u.unionFields)}
+  
+
+let fixupUnion _ (n, u) =
+  match u with
+  | APIUnion u -> 
+    let fixed = fixupUnionSizeAndOffsets n u in
+    n, APIUnion fixed
+  | _ -> n, u
+
+
+let fixupStructIsBoxed nm s =
+  match nm.namespace, nm.name with
+  | "GLib", "Variant" -> { s with structIsBoxed = false}
+  | (*ns*) _ , _ ->
+    let isBoxed =
+      begin
+      match s.structTypeInit with
+      | None -> false
+      | Some (*ti*) _ ->
+        (*TODO*)
+        (*let gtype = girLoadGType ns ti in
+        gtypeIsBoxed gtype*)
+        false (*dummy value *)
+      end in
+    { s with structIsBoxed = isBoxed }
+
+
+let fixupStructSizeAndOffsets nm s =
+  let size, infoMap = girStructFieldInfo nm.namespace nm.name in
+  {s with structSize = size; structFields = List.map (fixupField infoMap) s.structFields}
+
+
+let fixupStruct _ (n, s) =
+  match s with
+  | APIStruct s -> let fixed = fixupStructIsBoxed n s |> fixupStructSizeAndOffsets n in
+      n, APIStruct fixed
+  | _ -> (n, s)
+
+
+let fixupInterface csymbolMap (nm, i) = 
+  match i with
+  | APIInterface iface ->
+    let prereqs =
+      match iface.ifTypeInit with
+      | None -> []
+      | Some (*ti*) _ ->
+        (*TODO*)
+        (*let gtype = girLoadGType ns ti in
+        let prereqGTypes = gtypeInterfaceListPrereqs gtype in*)
+        let prereqGTypes = [] in (*dummy value*)
+        List.map (fun p -> 
+          match StringMap.find_opt p csymbolMap with
+          | Some pn -> pn
+          | None -> assert false
+          ) prereqGTypes
+    in nm, APIInterface {iface with ifPrerequisites = prereqs}
+  | _ -> (nm, i)
+
+let fixupGIRInfos doc deps =
   let rec fixup fixer (doc, deps) =
     let fixedDoc = fixAPIs fixer doc in
     let fixedDeps = List.map (fixAPIs fixer) deps
@@ -343,8 +409,8 @@ let check_sequence_result l =
     Some m1
     in List.fold_left (StringMap.union f_union) StringMap.empty (List.map (fun x -> x.girCTypes) (doc::deps))
   
-  in fixup fixupUnion (doc, deps) |> fixup fixupStruct |> fixup fixupInterface
-*)
+  in (fixup fixupInterface (doc, deps)) |> (fixup fixupStruct) |> (fixup fixupUnion)
+
 
 
 (* string -> bool -> string -> string option -> gir_info*(gir_info list)*)
@@ -354,7 +420,7 @@ let loadGIRInfo verbose name version (* extraPaths *) rules =
   (*TODO da capire la questione alias, da dove lo passo? Per ora passo mappa vuota, magari è giusto*)
   let f_union _ m1 _ =
     Some m1
-  in let aliases = List.fold_left (AliasMap.union f_union) (AliasMap.empty) (List.map (documentListAliases name AliasMap.empty) ([doc](*::deps_elem*))) in
+  in let aliases = List.fold_left (AliasMap.union f_union) (AliasMap.empty) (List.map (documentListAliases name AliasMap.empty) (doc :: deps_elems)) in
   let parsedDoc = toGIRInfo (parseGIRDocument aliases doc) in
   let parsedDeps = List.map (toGIRInfo) (List.map (parseGIRDocument aliases) (deps_elems)) in
   let combineErrors parsedDoc parsedDeps =
@@ -367,7 +433,8 @@ let loadGIRInfo verbose name version (* extraPaths *) rules =
   | Ok (docGIR, depsGIR) ->
     if docGIR.girNSName = name
     then
-      let fixedDoc, fixedDeps = (*fixupGIRInfos*) docGIR, depsGIR in
+      let _ = List.map (fun info -> Result.get_ok (GOI.Repository.require info.girNSName ~version:info.girNSVersion ())) (docGIR::depsGIR) in
+      let fixedDoc, fixedDeps = fixupGIRInfos docGIR depsGIR in
       fixedDoc, fixedDeps
     else assert false
 
