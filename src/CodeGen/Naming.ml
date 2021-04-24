@@ -131,7 +131,7 @@ let nsOCamlO currNs n =
     | {namespace = ns; name = nm;}, currNs when ns == currNs -> "#" ^ nm ^ "T." ^ (ocamlIdentifier n) ^ "_o"
     | {namespace = ns; name = nm;}, _ -> "#GI" ^ ns ^ "." ^ nm ^ "T." ^ (ocamlIdentifier n) ^ "_o"
 
-let signalOcamlName s =
+let signalOCamlName s =
     hyphensToUnderscores s |> escapeOCamlReserved
 
 

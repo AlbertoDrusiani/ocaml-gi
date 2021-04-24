@@ -184,6 +184,9 @@ and mergeInfo oldInfo newInfo =
   { info with moduleCode = Code (getCode (oldInfo.moduleCode) @ getCode (newInfo.moduleCode))}
 
 
+let currentNS minfo =
+  modulePathNS minfo.modulePath
+
 
 let addSubmodule minfo mName smInfo =
   match StringMap.mem mName minfo.submodules with
@@ -219,21 +222,21 @@ let findAPIByName cfg n =
 
 
 (* module_info -> code_token -> module_info *)
-let tellCode minfo c =
+let tellCode c minfo =
   { minfo with moduleCode = Code (getCode(minfo.moduleCode) @ [c])}
 
 (* module_info -> string -> module_info *)
-let line minfo s =
-  tellCode minfo (Line s)
+let line s minfo =
+  tellCode (Line s) minfo
 
 
 (* module_info -> code_token -> module_info *)
-let tellGCode minfo c =
+let tellGCode c minfo =
   { minfo with gCode = Code (getCode(minfo.gCode) @ [c])}
 
 (* module_info -> string -> module_info *)
-let gline minfo s =
-  tellGCode minfo (Line s)
+let gline s minfo =
+  tellGCode (Line s) minfo 
 
 (*let group' (cfg, cgstate, minfo) codeTeller blanker =*)
   
@@ -242,72 +245,72 @@ let gline minfo s =
   group' (cfg, cgstate, minfo) tellCode blank*)
   
 
-let cline minfo l =
+let cline l minfo =
   let info = cleanInfo minfo in
-  let info = line info l in
+  let info = line l info in
   let code = info.moduleCode in
   let minfo = mergeInfoState minfo info in
   { minfo with cCode = Code ((getCode(minfo.cCode)) @ getCode(code))}
 
 
 (* module_info -> code_token -> module_info *)
-let tellHCode minfo c =
+let tellHCode c minfo =
   { minfo with hCode = Code (getCode(minfo.hCode) @ [c])}
 
 (* module_info -> string -> module_info *)
-let hline minfo s =
-  tellHCode minfo (Line s)
+let hline s minfo =
+  tellHCode (Line s) minfo
 
 (* module_info -> code_token -> module_info *)
-let tellTCode minfo c =
+let tellTCode c minfo =
   { minfo with tCode = Code (getCode(minfo.tCode) @ [c]) }
 
 (* module_info -> string -> module_info *)
-let tline minfo s =
-  tellTCode minfo (Line s)
+let tline s minfo =
+  tellTCode (Line s) minfo
 
 
 let commentLine minfo t =
-  line minfo ("(* " ^ t ^ " *)")
+  line  ("(* " ^ t ^ " *)") minfo
 
 let blank minfo =
-  line minfo ""
+  line "" minfo
 
 let gblank minfo =
-  gline minfo ""
+  gline "" minfo 
 
 
-let indent minfo f param =
+let indent f minfo =
   let info = cleanInfo minfo in
-  let info = f info param in
+  let info = f info in
   let code = info.moduleCode in
   let minfo = mergeInfoState minfo info in
-  minfo = tellCode minfo (Indent code)
+  tellCode (Indent code) minfo 
 
 
-let gindent minfo f param =
+let gindent f minfo =
   let info = cleanInfo minfo in
-  let info = f info param in
+  let info = f info in
   let code = info.moduleCode in
   let minfo = mergeInfoState minfo info in
-  minfo = tellGCode minfo (Indent code)
+   tellGCode (Indent code) minfo 
 
 
-let group minfo f param =
+let group f minfo =
   let info = cleanInfo minfo in
-  let info = f info param in
+  let info = f info in
   let code = info.moduleCode in
   let minfo = mergeInfoState minfo info in
-  let minfo = tellCode minfo (Group code) in
+  let minfo = tellCode (Group code) minfo  in
   blank minfo
 
 
-let ggroup minfo f param =
+let ggroup f minfo =
   let info = cleanInfo minfo in
-  let info = f info param in
+  let info = f info in
   let code = info.moduleCode in
   let minfo = mergeInfoState minfo info in
-  let minfo = tellGCode minfo (Group code) in
+  let minfo = tellGCode (Group code) minfo  in
   gblank minfo
 
 
@@ -373,21 +376,21 @@ let addTypeFile cfg minfo n =
   | APIEnum _ -> minfo
   | APIFlags _ -> minfo
   | APIInterface _ ->
-    let step1 = tline minfo (textToOCamlType n None []) in
-    let step2 = tline step1 "" in
-    tline step2 (nameToClassType n)
+    let minfo = tline (textToOCamlType n None []) minfo  in
+    let minfo = tline "" minfo  in
+    tline (nameToClassType n) minfo 
   | APIObject o ->
     let parents = instanceTree cfg n in
-    let info = 
+    let minfo = 
       begin
       match parents with
-       | [] -> tline minfo (textToOCamlType n None o.objInterfaces)
-       | parent::_ -> tline minfo (textToOCamlType n (Some parent) o.objInterfaces)
+       | [] -> tline (textToOCamlType n None o.objInterfaces) minfo 
+       | parent::_ -> tline (textToOCamlType n (Some parent) o.objInterfaces) minfo 
       end
-    in let step1 = tline info "" in
-    tline step1 (nameToClassType n)
-  | APIStruct _ -> tline minfo "type t"
-  | APIUnion _ -> tline minfo "type t"
+    in let minfo = tline "" minfo in
+    tline (nameToClassType n) minfo 
+  | APIStruct _ -> tline "type t" minfo 
+  | APIUnion _ -> tline "type t" minfo 
 
 
 

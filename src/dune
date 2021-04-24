@@ -1,5 +1,5 @@
 (executable
-  (name API)
+  (name Object)
   (libraries gobject-introspection GIR)
   
 )

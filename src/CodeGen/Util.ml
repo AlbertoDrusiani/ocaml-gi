@@ -110,3 +110,9 @@ let breakOnFirst str1 str2 =
   else List.hd splitted
 
 
+let isPrefixOf prefix str =
+  let regexp = Str.regexp ("/^" ^ prefix) in
+  let replaced = Str.replace_first regexp str "" in
+  if (prefix ^ replaced) = str
+  then true
+  else false
