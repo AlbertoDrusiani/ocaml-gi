@@ -30,6 +30,15 @@ type arg = {
     transfer: transfer;
     }
 
+
+module Arg = struct
+  type t = arg
+  let compare a1 a2 =
+  Stdlib.compare a1.argCName a2.argCName
+end
+
+module ArgMap = Map.Make(Arg)
+
 (* xml -> transfer *) 
 let parseTransfer el =
   (*TODO debugging*)

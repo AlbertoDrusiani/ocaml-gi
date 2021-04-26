@@ -212,6 +212,22 @@ let rec submodule (cfg, cgstate, minfo) mPath =
 let addCDep minfo dep =
   {minfo with cDeps = StringSet.add dep (minfo.cDeps)}
 
+
+let getFreshTypeVariable cgstate =
+  let tyvar, next = 
+    match cgstate.cgsNextAvailableTyvar with
+    | SingleCharTyvar char ->
+      begin
+      match char with
+      | 'z' -> ("z", IndexedTyvar ("a", 0))
+      | 'a' -> ("b", SingleCharTyvar 'c')
+      | c -> (String.make 1 c, SingleCharTyvar (char_of_int (int_of_char c + 1)))
+      end
+    | IndexedTyvar (root, index) ->
+      (root ^ (string_of_int index), IndexedTyvar (root, index + 1))
+  in { cgsNextAvailableTyvar = next}, tyvar
+
+
 let findAPIByName cfg n =
   let apis = cfg.loadedAPIs in
   match NameMap.find_opt n apis with
@@ -219,6 +235,17 @@ let findAPIByName cfg n =
   | None -> assert false (*FIXME gestione errori*)
 
 
+let findAPI cfg t =
+  match t with
+  | TError -> Some (findAPIByName cfg {namespace = "GLib"; name = "Error"})
+  | TInterface n -> Some (findAPIByName cfg n)
+  | _ -> None
+
+
+let getAPI cfg t =
+  match findAPI cfg t with
+  | Some a -> a
+  | None -> assert false 
 
 
 (* module_info -> code_token -> module_info *)
@@ -238,12 +265,6 @@ let tellGCode c minfo =
 let gline s minfo =
   tellGCode (Line s) minfo 
 
-(*let group' (cfg, cgstate, minfo) codeTeller blanker =*)
-  
-
-(*let group (cfg, cgstate, minfo) =
-  group' (cfg, cgstate, minfo) tellCode blank*)
-  
 
 let cline l minfo =
   let info = cleanInfo minfo in
@@ -282,10 +303,10 @@ let gblank minfo =
 
 let indent f minfo =
   let info = cleanInfo minfo in
-  let info = f info in
+  let cgstate, info = f info in
   let code = info.moduleCode in
   let minfo = mergeInfoState minfo info in
-  tellCode (Indent code) minfo 
+  cgstate, tellCode (Indent code) minfo 
 
 
 let gindent f minfo =

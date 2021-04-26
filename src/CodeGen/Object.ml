@@ -1,17 +1,21 @@
-open API
-open GObject
 open GIR.BasicTypes
-open Naming
-open Code
+open GIR.Property
+open GIR.Method
 open GIR.Object
 open GIR.Interface
+open GIR.Arg
+open GIR.Callable
+
+open API
+open GObject
+open Naming
+open Code
 open Files
 open QualifiedNaming
 open Util
-open GIR.Property
-open GIR.Method
 open Filename
 open Signal
+open Callable
 
 (* config*cgstate*module_info -> name -> string -> string -> config*cgstate*module_info)*)
 let genObjectCasts (cfg, cgstate, minfo) n ctype checkMacro =
@@ -109,6 +113,46 @@ let isMakeParamsParent ns nm =
     else true
 
 
+let genObjectConstructor' constrDecl constCreate n cfg minfo =
+  let makeParams nm =
+    match nm with
+    | {namespace = "Gtk"; name = "Widget"} -> "GtkBase.Widget.size_params"
+    | _ -> nm.name ^ ".make_params"
+
+  in let makeParamsCont parent idx =
+    match idx with
+    | 0 -> indentBy 1 ^ makeParams parent ^ " [] ~cont:("
+    | _ -> indentBy (idx+1) ^ "fun pl ->" ^ makeParams parent ^ " pl ~cont:("
+
+  in let packShowLabels parents =
+    match List.mem {namespace = "Gtk"; name = "Widget"} parents with
+    | true -> "~packing ~show"
+    | false -> ""
+
+  in let closedParentheses makeParents =
+    String.make (List.length makeParents + 1) ')' 
+
+  in let currNS = currentNS minfo in
+  let parents = instanceTree cfg n in
+  let makeParamsParents = 
+    List.filter (isMakeParamsParent currNS) (List.rev parents)
+  in let mkParentsNum = List.length makeParamsParents in
+  let minfo = gline ("let " ^ constrDecl ^ " = begin") minfo in
+  let minfo = 
+    List.fold_left (fun info (p, idx) -> 
+    gline (makeParamsCont p idx) info) 
+    minfo 
+    (List.combine makeParamsParents (List.init (List.length makeParamsParents) (fun x -> x)))
+  in let minfo = gline (makeParamsCont n mkParentsNum) minfo in
+  let minfo = gline (indentBy (mkParentsNum + 2) ^ (
+    if List.mem ({namespace = "Gtk"; name = "Widget"}) parents
+    then "fun pl ?packing ?show () -> GObj.pack_return ("
+    else "fun pl () -> ("
+  )) minfo in
+  let minfo = gline constCreate minfo in
+  let minfo = 
+    gline (indentBy (mkParentsNum +3) ^ packShowLabels parents ^ closedParentheses makeParamsParents) minfo
+  in gline "end" minfo
 
 let genDefaultObjectConstructor n ocamlName cfg minfo =
   let currNS = currentNS minfo in
@@ -118,7 +162,47 @@ let genDefaultObjectConstructor n ocamlName cfg minfo =
   in let mkParentsNum = List.length makeParamsParents in
   let creator = 
     indentBy (mkParentsNum + 3) ^ "new " ^ ocamlName ^ " (" ^ n.name ^ ".create pl" in
-  genObjectConstructor' ocamlName creator n
+  genObjectConstructor' ocamlName creator n cfg minfo
+
+
+
+let genAdditionalObjectConstructor n ocamlClassName m cfg minfo =
+  let currNS = currentNS minfo in
+  let parents = instanceTree cfg n in
+  let makeParamsParents = 
+    List.filter (isMakeParamsParent currNS) (List.rev parents)
+  in let mkParentsNum = List.length makeParamsParents in
+  let ind = indentBy (mkParentsNum + 3) in
+  let constrName = ocamlIdentifier m.methodName in
+  let argsTextList =
+    List.map (fun x -> x.argCName |> camelCaseToSnakeCase |> escapeOCamlReserved) m.methodCallable.args
+  in let argsText =
+    match argsTextList with
+    | [] -> "()"
+    | _ -> String.concat " " argsTextList
+  in let constrWithArgs = constrName ^ " " ^ argsText in
+  let creator' =
+    if m.methodCallable.returnMayBeNull
+    then [ 
+      "let o_opt = " ^ n.name ^ "." ^ constrWithArgs ^ " in";
+      "Option.map (fun o ->";
+      "  GtkObject._ref_sink o;";
+      "  Gobject.set_params o pl;";
+      "  new " ^ ocamlClassName ^ " o";
+      ") o_opt)"
+    ]
+    else [
+      "let o = " ^ n.name ^ "." ^ constrWithArgs ^ " in";
+      "GtkObject._ref_sink o;";
+      "Gobject.set_params o pl;";
+      "new " ^ ocamlClassName ^ " o)";
+    ]
+  in let creator =
+    (*FIXME da capire meglio quella concatenzionne, riga 396 haskell*)
+    String.concat "\n" ((ind :: (noLast creator')) @ (ind :: [List.hd (List.rev creator')]))
+  in genObjectConstructor' constrWithArgs creator n cfg minfo
+
+
 
 
 
@@ -194,10 +278,10 @@ let genObject' (cfg, minfo) n o ocamlName =
     List.filter (fun m -> m.methodType = Constructor && m.methodName.name != "new") o.objMethods in
   let minfo =
     List.fold_left (fun info m -> 
-                    let canGenerate = canGenerateCallable m.methodCallable in
+                    let minfo, canGenerate = canGenerateCallable cfg info m.methodCallable in
                     if canGenerate
-                    then genAdditionalObjectConstructor n ocamlName m info 
-                    else gblank info)
+                    then genAdditionalObjectConstructor n ocamlName m cfg minfo 
+                    else gblank minfo)
                     minfo constructors in
   minfo
 

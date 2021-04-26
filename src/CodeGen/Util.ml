@@ -116,3 +116,6 @@ let isPrefixOf prefix str =
   if (prefix ^ replaced) = str
   then true
   else false
+
+
+let swap (x, y) = (y, x)

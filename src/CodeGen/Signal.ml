@@ -60,3 +60,5 @@ let genSignal s on cfg minfo =
   let signalConnectorName = classe ^ ucFirst sn' in
   let cbType = signalConnectorName ^ "Callback" in
   genOCamlCallbackPrototype sn' s.sigCallable cbType classe WithoutClosures s.sigDoc cfg minfo
+
+  
