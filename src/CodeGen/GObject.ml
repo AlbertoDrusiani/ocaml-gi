@@ -27,6 +27,9 @@ and typeDoParentSearch cfg nm t =
   | _, _ -> false 
 
 
-
 let isGObject cfg t =
   typeDoParentSearch cfg ({namespace = "GObject"; name = "Object"}) t
+
+
+let apiIsGObject cfg n api =
+  apiDoParentSearch cfg {namespace = "GObject"; name = "Object"} n api

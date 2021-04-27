@@ -38,43 +38,43 @@ let genEnumOrFlags minfo n e enumOrFlag =
   let minfo = List.fold_left (
     fun minfo memberName -> 
     let hashValue = hashVariant memberName in 
-    hline minfo ("#define MLTAG_" ^ memberName ^ " ((value)(" ^ string_of_int(hashValue) ^"*2+1))")
+    hline ("#define MLTAG_" ^ memberName ^ " ((value)(" ^ string_of_int(hashValue) ^"*2+1))") minfo
     )  minfo memberNames in 
-  let minfo = hline minfo "" in 
-  let minfo = hline minfo ("extern const lookup_info " ^ mlTableName ^ "[];") in 
-  let minfo = hline minfo ("#define " ^ valEnum n ^ "(data) ml_lookup_from_c (" ^ mlTableName ^ ", data)") in 
-  let minfo = hline minfo ("#define " ^ enumVal n ^ "(key) ml_lookup_to_c (" ^ mlTableName ^ ", key)") in 
-  let minfo = hline minfo "" in 
-  let minfo = line minfo ("type " ^ enumName ^ " = [ " ^ (String.concat " | " variants) ^ " ]") in 
+  let minfo = hline "" minfo in 
+  let minfo = hline ("extern const lookup_info " ^ mlTableName ^ "[];") minfo in 
+  let minfo = hline ("#define " ^ valEnum n ^ "(data) ml_lookup_from_c (" ^ mlTableName ^ ", data)") minfo in 
+  let minfo = hline ("#define " ^ enumVal n ^ "(key) ml_lookup_to_c (" ^ mlTableName ^ ", key)") minfo in 
+  let minfo = hline "" minfo in 
+  let minfo = line ("type " ^ enumName ^ " = [ " ^ (String.concat " | " variants) ^ " ]") minfo in 
   let minfo = blank minfo in 
-  let minfo = line minfo ("external get_" ^ enumName ^ "_table : unit -> " ^ enumName ^ " GPointer.variant_table = \"" ^ cGetterFn ^ "\"" ) in 
-  let minfo = line minfo ("let " ^ ocamlTbl ^ " = get_" ^ enumName ^ "_table ()") in 
+  let minfo = line ("external get_" ^ enumName ^ "_table : unit -> " ^ enumName ^ " GPointer.variant_table = \"" ^ cGetterFn ^ "\"" ) minfo in 
+  let minfo = line ("let " ^ ocamlTbl ^ " = get_" ^ enumName ^ "_table ()") minfo in 
   let minfo = 
   if enumOrFlag = Enum
-  then line minfo ("let " ^ enumName ^ " = GObject.Data.enum " ^ ocamlTbl)
-  else line minfo ("let " ^ enumName ^ " = GObject.Data.flags " ^ ocamlTbl)
+  then line ("let " ^ enumName ^ " = GObject.Data.enum " ^ ocamlTbl) minfo
+  else line ("let " ^ enumName ^ " = GObject.Data.flags " ^ ocamlTbl) minfo
   in let minfo = blank minfo in
-  let minfo = addCDep minfo (n.namespace ^ "Enums") in 
-  let minfo = cline minfo ("const lookup_info " ^ mlTableName ^ "[] = {") in
-  let minfo = cline minfo ("  { 0, " ^ string_of_int(List.length e.enumMembers) ^ " },") in 
+  let minfo = addCDep minfo (n.namespace ^ "Enums")  in 
+  let minfo = cline ("const lookup_info " ^ mlTableName ^ "[] = {") minfo in
+  let minfo = cline ("  { 0, " ^ string_of_int(List.length e.enumMembers) ^ " },") minfo in 
   let minfo = List.fold_left (
-    fun minfo (memberName, memberCId) -> cline minfo ("  { MLTAG_" ^ memberName ^ ", " ^ memberCId ^ " },"))
+    fun minfo (memberName, memberCId) -> cline ("  { MLTAG_" ^ memberName ^ ", " ^ memberCId ^ " },") minfo )
     minfo namesAndIds in
-  let minfo = cline minfo "};" in 
-  let minfo = cline minfo "" in 
-  let minfo = cline minfo ("CAMLprim value " ^ cGetterFn ^ " () {") in
-  let minfo = cline minfo ("  return (value) " ^ mlTableName ^ ";") in 
-  let minfo = cline minfo "}" in 
+  let minfo = cline "};" minfo in 
+  let minfo = cline "" minfo in 
+  let minfo = cline ("CAMLprim value " ^ cGetterFn ^ " () {") minfo in
+  let minfo = cline ("  return (value) " ^ mlTableName ^ ";") minfo in 
+  let minfo = cline "}" minfo in 
   let minfo =
     if (enumOrFlag = Flag)
     then 
-      let minfo = cline minfo ("Make_Flags_val(" ^ enumVal n ^ ")") in 
-      let minfo = cline minfo ("Make_OptFlags_val(" ^ enumVal n ^ ")") in 
-      let minfo = hline minfo ("CAMLprim int " ^ flagsVal n ^ " (value list);") in 
-      hline minfo ("CAMLprim int " ^ optFlagsVal n ^ " (value list);")
+      let minfo = cline ("Make_Flags_val(" ^ enumVal n ^ ")") minfo in 
+      let minfo = cline ("Make_OptFlags_val(" ^ enumVal n ^ ")") minfo in 
+      let minfo = hline ("CAMLprim int " ^ flagsVal n ^ " (value list);") minfo in 
+      hline ("CAMLprim int " ^ optFlagsVal n ^ " (value list);") minfo
     else 
       minfo
-  in cline minfo ""
+  in cline "" minfo
  
 
 let genEnum cfg cgstate minfo n e =

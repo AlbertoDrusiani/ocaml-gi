@@ -16,9 +16,11 @@ open Util
 open Filename
 open Signal
 open Callable
+open Method
+
 
 (* config*cgstate*module_info -> name -> string -> string -> config*cgstate*module_info)*)
-let genObjectCasts (cfg, cgstate, minfo) n ctype checkMacro =
+let genGObjectCasts (cfg, cgstate, minfo) n ctype checkMacro =
   match not (NameSet.mem n noCType) with
   | true -> (cfg, cgstate, minfo)
   | false -> 
@@ -206,9 +208,9 @@ let genAdditionalObjectConstructor n ocamlClassName m cfg minfo =
 
 
 
-let genObject' (cfg, minfo) n o ocamlName =
+let genObject' (cfg, cgstate, minfo) n o ocamlName =
   let parents = instanceTree cfg n in 
-  let name' = upperName n in 
+  (*let name' = upperName n in *)
   let nspace = n.namespace in
   let objectName = n.name in
   let minfo = genCObjectTypeInit minfo o n in
@@ -240,32 +242,33 @@ let genObject' (cfg, minfo) n o ocamlName =
     in gline ("  method as_" ^ ocamlName ^ " = (obj :> " ^ nsOCamlType n.namespace n ^ " Gobject.obj") minfo in
   let minfo = genMlTypeInit minfo n in
   (*let minfo = group minfo in*)
-  let minfo = 
+  let cgstate, minfo = 
     match o.objSignals = [] with
-    | true -> minfo
+    | true -> cgstate, minfo
     | false -> group 
               (fun m -> indent 
                         (fun i -> 
                         let acc = line "open GtkSignal" i 
                         |> line "openGobject"
                         |> line "open Data"
-                        in List.fold_left (fun info s -> genSignal s n cfg info) acc o.objSignals) 
-                        (line "module S = struct" m) |> line "end")
-              minfo
-  in let minfo = group (line ("let cast w : " ^ 
+                        in cgstate, List.fold_left (fun info s -> genSignal s n cfg info) acc o.objSignals) 
+                        (line "module S = struct" m) |> (fun (x, y) -> x, line "end" y)) minfo
+  in let cgstate, minfo = group (fun minfo -> cgstate, (line ("let cast w : " ^ 
                         nsOCamlType n.namespace n ^
                         " Gobject.obj = Gobject.try_cast w \"" ^
-                        nspace ^ objectName ^ "\"")) minfo
-  in let minfo = group (line ("let create pl : " ^
+                        nspace ^ objectName ^ "\"")) minfo ) minfo
+
+  in let cgstate, minfo = group (fun minfo -> cgstate, (line ("let create pl : " ^
                         nsOCamlType n.namespace n ^
                         " Gobject.obj = GtkObject.make \" pl" ^
-                        nspace ^ objectName ^ "\"")) minfo
+                        nspace ^ objectName ^ "\"")) minfo) minfo
   in let minfo = gline ("  (* Methods *)") minfo in
   let methods = o.objMethods in
   let methods' = List.filter (fun x -> not(isSetterOrGetter o x)) methods in
   (*TODO qua probabilmente ci andrà una try perché lui chiama a handleCGexc,
   forse la genMethod può fallire*)
-  let minfo = List.fold_left (fun info f -> genMethod info n f) minfo methods' in
+  let cgstate, minfo = 
+    List.fold_left (fun (cgstate, minfo) f -> genMethod cfg cgstate minfo n f) (cgstate, minfo) methods' in
   let minfo = gline "end" minfo in
   let minfo = gblank minfo in
   let minfo = gline (" and" ^ ocamlName ^ " obj = object (self)") minfo in
@@ -276,14 +279,14 @@ let genObject' (cfg, minfo) n o ocamlName =
   let minfo = genDefaultObjectConstructor n ocamlName cfg minfo in
   let constructors = 
     List.filter (fun m -> m.methodType = Constructor && m.methodName.name != "new") o.objMethods in
-  let minfo =
-    List.fold_left (fun info m -> 
-                    let minfo, canGenerate = canGenerateCallable cfg info m.methodCallable in
+  let cgstate, minfo =
+    List.fold_left (fun (cgstate, info) m -> 
+                    let cgstate, minfo, canGenerate = canGenerateCallable cfg cgstate info m.methodCallable in
                     if canGenerate
-                    then genAdditionalObjectConstructor n ocamlName m cfg minfo 
-                    else gblank minfo)
-                    minfo constructors in
-  minfo
+                    then cgstate, genAdditionalObjectConstructor n ocamlName m cfg minfo 
+                    else cgstate, gblank minfo)
+                    (cgstate, minfo) constructors in
+  cfg, cgstate, minfo
 
 
 
@@ -292,7 +295,7 @@ let getObjCheckMacro o =
   String.uppercase_ascii (breakOnFirst "_get_type" o.objTypeInit)
 
 (* config*cgstate*module_info -> nListame -> object -> module_info)*)
-let genObject (cfg, cgstate, minfo) n o =
+let genObject cfg cgstate minfo n o =
   let isGO = isGObject cfg (TInterface n) in 
   if not isGO
   then (cfg, cgstate, minfo)
@@ -304,7 +307,58 @@ let genObject (cfg, cgstate, minfo) n o =
     let (cfg, cgstate, minfo) = 
       match o.objCType with
       | None -> cfg, cgstate, minfo
-      | Some ctype -> genObjectCasts (cfg, cgstate, minfo) n ctype (getObjCheckMacro o)
+      | Some ctype -> genGObjectCasts (cfg, cgstate, minfo) n ctype (getObjCheckMacro o)
     in if NameSet.mem n excludeFiles 
     then cfg, cgstate, minfo
-    else cfg, cgstate, genObject' (cfg, minfo) n o ocamlName
+    else genObject' (cfg, cgstate, minfo) n o ocamlName
+
+
+let getIfCheckMacro i =
+  let typeInit = i.ifTypeInit in
+  match typeInit with
+  | None -> None
+  | Some t -> Some (breakOnFirst "_get_type" t |> String.uppercase_ascii)
+
+
+let genCInterfaceTypeInit minfo i n =
+  match i with
+  | iface when Option.is_some iface.ifTypeInit -> 
+    cline (cTypeInit (camelCaseToSnakeCase (n.namespace ^ n.name)) (Option.get iface.ifTypeInit)) minfo
+  | _ -> minfo 
+
+(*let genInterface cfg cgstate minfo n iface = 
+  let name' = upperName n in
+  let ocamlName = escapeOCamlReserved (camelCaseToSnakeCase n.name) in
+  let isGO = apiIsGObject cfg n (APIInterface iface) in
+  let minfo = addTypeFile cfg minfo n in
+  let minfo = addCDep minfo (n.namespace ^ n.name) in
+  let cfg, cgstate, minfo =
+    match (iface.ifCType, getIfCheckMacro iface) with
+    | (Some ctype, Some checkMacro) ->
+      let cfg, cgstate, minfo  = genGObjectCasts (cfg, cgstate, minfo) n ctype checkMacro in
+      let minfo = genMlTypeInit minfo n in
+      let minfo = genCInterfaceTypeInit minfo iface n in
+      cfg, cgstate, minfo
+    | _, _ -> cfg, cgstate, minfo
+  in 
+    match NameSet.mem n excludeFiles with
+    | true -> cfg, cgstate, minfo
+    | false ->
+      let minfo = (*QUI*)
+      if isGO
+      then
+        let minfo = gline ("class virtual " ^ ocamlName ^ "_signals obj = object (self)") minfo in
+        let minfo = gline ("  method private virtual connect : 'b. ('a,'b) GtkSignal.t -> callback:'b -> GtkSignal.id") minfo in
+        let minfo = List.fold_left (fun minfo s -> genGSignal s n cfg minfo ) minfo iface.ifSignals in
+        let minfo = gline "end" minfo in
+        gblank minfo
+      else
+        minfo 
+      in let minfo = gline ("class " ^ ocamlName ^ "_skel obj = object (self)") minfo in
+      let minfo = gline ("  method as_" ^ ocamlName ^ " = (obj :> " ^ (nsOCamlType n.namespace n) ^ " Gobject.obj") minfo in
+      let minfo = gblank minfo in
+      if isGO
+      then
+        let minfo = group genInter
+
+*)

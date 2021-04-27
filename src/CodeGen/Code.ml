@@ -197,16 +197,18 @@ let addSubmodule minfo mName smInfo =
 (*TODO qua viene fatta la runCodeGen e può sollevarsi un errore, gestisco in seguito*)
 (*FIXME sta roba è bacatissima sicuro, manca la gestione del cgstate e la runcodegen come funziona?*)
 (* code_gen_config -> cgstate -> module_info -> string -> (cfg * cgstate *)
-let submodule' (cfg, cgstate, minfo) mName =
-  let info = emptyModule ({modulePathToList = minfo.modulePath.modulePathToList @ [mName]}) in
-  cfg, cgstate, (addSubmodule minfo mName info)
+let submodule' (cfg, cgstate, minfo) f mName =
+  let oldInfo = minfo in
+  let info = emptyModule ({modulePathToList = oldInfo.modulePath.modulePathToList @ [mName]}) in
+  let _, _, smInfo = f (cfg, emptyCGState, info) in
+  cfg, cgstate, (addSubmodule oldInfo mName smInfo)
 
 
 (* code_gen_config*cgstate*module_info -> module_path -> (cfg * cgstate * minfo *)
 let rec submodule (cfg, cgstate, minfo) mPath =
   match mPath.modulePathToList with
   | [] -> cfg, cgstate, minfo
-  | m::ms -> submodule' (submodule (cfg, cgstate, minfo) {modulePathToList = ms}) m
+  | m::ms -> submodule' (cfg, cgstate, minfo) (fun (cfg, cgstate, minfo) -> submodule (cfg, cgstate, minfo) {modulePathToList = ms}) m
 
 
 let addCDep minfo dep =
@@ -300,39 +302,45 @@ let blank minfo =
 let gblank minfo =
   gline "" minfo 
 
-
-let indent f minfo =
+(* dovrebbe essere corretta: prende lo statio vecchio (la tripla), una funzione che
+   computa su una tripla e restituisce cgstate e minfo nuovi. La runCodeGen la simulo
+   accumulando nella funzione le cose da fare e poi passandole stati nuovi o modificati, a seconda*)
+let recurseWithAPIs (cfg, cgstate, minfo) f apis =
   let info = cleanInfo minfo in
+  let cfg' = { cfg with loadedAPIs = apis; (*c2hMap = cToHaskellMap (NameMap.to_seq apis |> List.of_seq) *)} in
+  let _, _, newInfo = f (cfg', cgstate, info) in
+  cfg, cgstate, newInfo 
+
+
+let recurseWithState f minfo =
+  let oldInfo = minfo in
+  let info = cleanInfo oldInfo in
   let cgstate, info = f info in
   let code = info.moduleCode in
   let minfo = mergeInfoState minfo info in
+  cgstate, minfo, code
+
+
+let indent f minfo =
+  let cgstate, minfo, code = recurseWithState f minfo in
   cgstate, tellCode (Indent code) minfo 
 
 
 let gindent f minfo =
-  let info = cleanInfo minfo in
-  let info = f info in
-  let code = info.moduleCode in
-  let minfo = mergeInfoState minfo info in
-   tellGCode (Indent code) minfo 
+  let cgstate, minfo, code = recurseWithState f minfo in 
+  cgstate, tellGCode (Indent code) minfo 
 
 
 let group f minfo =
-  let info = cleanInfo minfo in
-  let info = f info in
-  let code = info.moduleCode in
-  let minfo = mergeInfoState minfo info in
+  let cgstate, minfo, code = recurseWithState f minfo in
   let minfo = tellCode (Group code) minfo  in
-  blank minfo
+  cgstate, blank minfo
 
 
 let ggroup f minfo =
-  let info = cleanInfo minfo in
-  let info = f info in
-  let code = info.moduleCode in
-  let minfo = mergeInfoState minfo info in
+  let cgstate, minfo, code = recurseWithState f minfo in
   let minfo = tellGCode (Group code) minfo  in
-  gblank minfo
+  cgstate, gblank minfo
 
 
 let nameToClassType n =

@@ -1,7 +1,7 @@
 open GIR.BasicTypes
 open GIR.Allocation
 open API
-open Util
+(*open Util*)
 
 type overrides = {
   ignoredElems: StringSet.t  NameMap.t;

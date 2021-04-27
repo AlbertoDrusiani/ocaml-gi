@@ -1,10 +1,15 @@
 open GIR.BasicTypes
 open GIR.Method
 open GIR.Callable
+open GIR.Property
+open GIR.Arg
 open GObject
 open Naming
 open Code
 open QualifiedNaming
+open Callable
+open TypeRep
+open Util
 
 
 
@@ -86,13 +91,125 @@ let rec showMethodOutArg cfg minfo m =
     "(" ^ (String.concat " * " argsText) ^ ")"
 
 
+
+let methodInTypeShow cgstate ns trep =
+  match ns, trep with
+  | _, OptionCon (ObjCon (TypeVarCon (tvar, (RowCon (More, (PolyCon( NameCon n))))))) 
+    when n.namespace = "Gtk" 
+  -> cgstate, ClassType (true, tvar, n)
+  | currNS, (OptionCon (ObjCon (TypeVarCon (tvar, (RowCon (More, (PolyCon( NameCon _))))))) as t)-> 
+    cgstate, NonGtkClassType (true, tvar, (methodTypeShow currNS t))
+  | _, ObjCon (TypeVarCon (tvar, RowCon (More, PolyCon (NameCon n)))) 
+    when n.namespace = "Gtk" -> cgstate, ClassType (false, tvar, n)
+  | currNS, ((ObjCon (TypeVarCon (tvar, (RowCon (More, PolyCon (NameCon _)))))) as t)
+    -> cgstate, NonGtkClassType (false, tvar, (methodTypeShow currNS t))
+  | currNS, t -> 
+    let cgstate, tvar = getFreshTypeVariable cgstate in
+    cgstate, BasicIn (tvar, (methodTypeShow currNS t))
+
+
+
+let rec methodOutTypeShow ns trep =
+  match ns, trep with
+  | _, OptionCon (ObjCon (TypeVarCon (_, (RowCon (Less, (PolyCon( NameCon n))))))) 
+    when n.namespace = "Gtk" -> Class (true, n)
+  | currNS, (OptionCon (ObjCon (TypeVarCon (tvar, (RowCon (Less, (PolyCon( NameCon _))))))) as t)-> 
+    NonGtkClass (true, tvar, (methodTypeShow currNS t))
+  | _, ObjCon (TypeVarCon (_, RowCon (Less, PolyCon (NameCon n)))) 
+    when n.namespace = "Gtk" -> Class (false, n)
+  | currNS, ((ObjCon (TypeVarCon (tvar, (RowCon (Less, PolyCon (NameCon _)))))) as t)
+    -> NonGtkClass (false, tvar, (methodTypeShow currNS t))
+  | currNS, TupleCon treps ->
+    let outArgs = List.map (methodOutTypeShow currNS) treps in
+    TupleOut outArgs
+  | currNS, t -> BasicOut (methodTypeShow currNS t)
+
+
+let typeRepsToMethodArgs cgstate minfo l =
+  match l with
+  | [] -> cgstate, None
+  | h::typeRepsTail ->
+    let currNS = currentNS minfo in
+    let cgstate, headArg = methodInTypeShow cgstate currNS h in
+    let cgstate, inArgs' = 
+      List.fold_left_map (fun state trep -> 
+        methodInTypeShow state currNS trep) cgstate (noLast typeRepsTail)
+    in let inArgs =
+      match headArg with
+      | ClassType (_, _, _) -> inArgs'
+      | BasicIn (_, _) -> headArg :: inArgs'
+      | NonGtkClassType (_, _, _) -> headArg :: inArgs'
+    in let retTypeRep = List.rev l |> List.hd in
+    let retArg = methodOutTypeShow currNS retTypeRep in
+    cgstate, Some (headArg, inArgs, retArg)
+
+
+let fixMethodArgs c =
+
+  let fixCArrayLength t =
+    match t with
+    | TCArray (zt, fixed, len, t) ->
+        if len > -1 then TCArray (zt, fixed, len+1, t) else TCArray (zt, fixed, len, t)
+    | t -> t
+  
+  in let fixLengthArg arg =
+    { arg with argType = fixCArrayLength arg.argType}
+
+  in let fixDestroyers arg =
+    let destroy = arg.argDestroy in
+    if destroy > -1 then { arg with argDestroy = destroy + 1} else arg
+
+  in let fixClosures arg =
+    let closure = arg.argClosure in
+    if closure > -1 then { arg with argClosure = closure + 1} else arg
+
+  in let fixInstance arg =
+    { arg with mayBeNull = false; direction = DirectionIn}
+
+  in let returnType' = Option.map fixCArrayLength c.returnType in
+  let args' = List.map (fun x -> fixLengthArg x |> fixClosures |> fixDestroyers) c.args in
+  let args'' = fixInstance (List.hd args') :: List.tl args' in
+  { c with args = args''; returnType = returnType'}
+
+
+
+
+
 let fixConstructorReturnType returnsGObject cn c =
   let returnType' =
     if returnsGObject then Some (TInterface cn) else c.returnType
   in { c with returnType = returnType'}
 
 
-let genMethod cfg minfo cn m  =
+let isMethodAlsoAProp cfg cn mName =
+  let api = findAPIByName cfg cn in
+  match api with
+  | APIObject o ->
+    let propName = List.map (fun x -> x.propName |> hyphensToUnderscores) o.objProperties in
+    List.mem mName propName
+  | _ -> false
+
+
+let isMethodInParents cfg cn mName =
+  let parents = instanceTree cfg cn in
+  let parentsHasProp = 
+  List.map (fun parentName ->
+    let api = findAPIByName cfg parentName in
+    match api with
+    | APIObject o ->
+      let parentPropNames = List.map (fun x -> x.propName |> hyphensToUnderscores) o.objProperties in
+      let parentPropGetters = List.map (fun x -> "get_" ^ x) parentPropNames in
+      let parentPropSetters = List.map (fun x -> "set_" ^ x) parentPropNames in
+      let parentPropNames' = parentPropGetters @ parentPropSetters in
+      let parentMethodNames = List.map (fun x -> x.methodName.name) o.objMethods in
+      let parentNames = parentPropNames' @ parentMethodNames in
+      List.mem mName parentNames
+    | _ -> false
+  ) parents
+  in List.mem true parentsHasProp
+
+
+let genMethod cfg cgstate minfo cn m  =
   let getOCamlClass cfg n =
     let ocamlClass = nsOCamlClass minfo n in
     let api = findAPIByName cfg n in
@@ -148,22 +265,22 @@ let genMethod cfg minfo cn m  =
         | None -> false
         | Some s -> isGObject cfg s
       in let c' = fixConstructorReturnType returnsGObject cn m.methodCallable in
-      genCCallableWrapper m.methodName m.methodName c'
-    else minfo
+      genCCallableWrapper cfg cgstate minfo m.methodName m.methodSymbol c'
+    else cgstate, minfo
   | t ->
-    let isAProp = isMethodAlsoAProp cn m.methodName.name in
+    let isAProp = isMethodAlsoAProp cfg cn m.methodName.name in
     match isAProp with
-    | true -> minfo
+    | true -> cgstate, minfo
     | false -> 
-      let alreadyDefMethod = isMethodInParents cn m.methodName.name in
+      let alreadyDefMethod = isMethodInParents cfg cn m.methodName.name in
       let mName = escapeOCamlReserved m.methodName.name in
       let mDeclName = if alreadyDefMethod then mName ^ "_" ^ ocamlIdentifier cn else mName in
       let c' = if t = OrdinaryMethod then fixMethodArgs m.methodCallable else m.methodCallable in
-      let minfo = genCCallableWrapper m.methodName m.methodSymbol c' in
-      let typeReps = callableOcamlTypes c' in
-      let mbMethodArgs = typeRepsToMethodArgs typeReps in
+      let cgstate, minfo = genCCallableWrapper cfg cgstate minfo m.methodName m.methodSymbol c' in
+      let cgstate, typeReps = callableOCamlTypes cfg cgstate minfo c' in
+      let cgstate, mbMethodArgs = typeRepsToMethodArgs cgstate minfo typeReps in
       match mbMethodArgs with
-      | None -> minfo
+      | None -> cgstate, minfo
       | Some mArgs ->
         let tVars = extractClassVars mArgs in
         let tVarsText = 
@@ -175,4 +292,4 @@ let genMethod cfg minfo cn m  =
         let mBody = methodBody tVars mName mArgs in
         let minfo = gline ("  method " ^ mDeclName ^ mSig ^ " = ") minfo in
         let minfo = gline ("    " ^ bodyPrefix mArgs ^ mBody) minfo in
-        gline "" minfo 
+        cgstate, gline "" minfo 

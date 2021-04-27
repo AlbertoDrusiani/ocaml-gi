@@ -173,7 +173,7 @@ let genOCamlExternal cfg cgstate minfo mn cSymbol callable =
 
 
 
-let genMlMacro cfg mn cSymbol callable =
+let genMlMacro cfg minfo mn cSymbol callable =
   let inArgs = callableHInArgs' callable in
   let nArgs = List.length callable.args in
   let outArgs = callableHOutArgs callable in
@@ -185,7 +185,33 @@ let genMlMacro cfg mn cSymbol callable =
       let numOutArgs = string_of_int (List.length outArgs) in
       let numInArgs = string_of_int (List.length inArgs) in
       let outCTypes = List.map (fun x -> cType cfg (x.argType)) outArgs in
-
+      let minfo, outConvTypes = 
+        List.fold_left_map (fun minfo outArg -> 
+            cToOCamlValue cfg minfo outArg.mayBeNull (Some outArg.argType)) minfo outArgs
+      (*sta roba dovrebbe funzionare come una fold_map_2, con due accumulatori perché ritorno una coppia *)
+      in let minfo, inArgTypes = List.fold_left2 (fun (minfo, l) idx arg -> 
+        let u = foreignArgConverter cfg minfo idx arg in
+        fst u, (snd u) :: l) (minfo,[]) (List.init (List.length inArgs) (fun x -> x+1)) inArgs in
+      let minfo, retTypeName = cToOCamlValue cfg minfo callable.returnMayBeNull callable.returnType in
+      let outArgTypes = List.map2 (fun x y -> x ^ ", " ^ y) outCTypes outConvTypes in
+      let macroName =
+        match callable.returnType with
+        | None -> "ML_" ^ numInArgs ^ "in_" ^ numOutArgs ^ "out_discard_ret ("
+        | Some _ -> "ML_" ^ numInArgs ^ "in_" ^ numOutArgs ^ "out ("
+      in cline
+       (macroName ^ (String.lowercase_ascii mn.namespace) ^ ", " ^ cSymbol ^
+        ", " ^ (String.concat ", " inArgTypes) ^ ", " ^ (String.concat ", " outArgTypes) ^
+        ", " ^ retTypeName ^ ")") minfo
+    else
+      let macroName = "ML_" ^ string_of_int nArgs ^ " (" in
+      let minfo, retTypeName = cToOCamlValue cfg minfo callable.returnMayBeNull callable.returnType in
+      let minfo, argTypes = List.fold_left2 (fun (minfo, l) idx arg -> 
+        let u = foreignArgConverter cfg minfo idx arg in
+        fst u, (snd u) :: l) (minfo,[]) (List.init (List.length inArgs) (fun x -> x+1)) callable.args in
+      let macroArgs =
+        String.concat ", " ([String.lowercase_ascii mn.namespace; cSymbol] @ argTypes @ [retTypeName])
+      in cline (macroName ^ macroArgs ^ ")") minfo
+ 
     
 
 
@@ -193,4 +219,4 @@ let genCCallableWrapper cfg cgstate minfo mn cSymbol callable =
   let callable' = fixupCallerAllocates callable in
   let cgstate, minfo = genOCamlExternal cfg cgstate minfo mn cSymbol callable' in
   let minfo = blank minfo in
-  genMlMacro mn cSymbol callable'
+  cgstate, genMlMacro cfg minfo mn cSymbol callable'

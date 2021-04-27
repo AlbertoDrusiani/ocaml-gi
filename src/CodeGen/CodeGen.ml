@@ -1,20 +1,22 @@
+open GIR.BasicTypes
+open GIR.Struct
+open GIR.Union
+
 open Code
 open Naming
 open QualifiedNaming
-open GIR.BasicTypes
 open API
-open GIR.Struct
-open GIR.Union
-open Naming
-open Struct
 open EnumFlags
+open Object
+open Struct
+open Fixups
 
 (*let genFunction n f =*)
 
 let genUnionCasts minfo n u =
   let mbCType = u.unionCType in
   match mbCType with
-  | Some cType -> hline minfo ("#define" ^ (structVal n) ^ "(val) ((" ^ cType ^ ") MLPointer_val(val))") 
+  | Some cType -> hline ("#define" ^ (structVal n) ^ "(val) ((" ^ cType ^ ") MLPointer_val(val))") minfo
   | None -> minfo
   (*TODO da sistemare asterisco da escapare e da capire come restituire unit*)
 
@@ -27,8 +29,8 @@ let genUnion cfg minfo n u =
 let genStructCasts minfo n s =
   let mbCType = s.structCType in
   match mbCType with
-  | Some "GdkAtom" -> hline minfo ("#define " ^ (structVal n) ^ "(val) ((GdkAtom) MLPointer_val(val))")
-  | Some cType -> hline minfo ("define " ^ (structVal n) ^ "(val) ((" ^ cType ^ ") MLPointer_val(val))")
+  | Some "GdkAtom" -> hline ("#define " ^ (structVal n) ^ "(val) ((GdkAtom) MLPointer_val(val))") minfo
+  | Some cType -> hline ("define " ^ (structVal n) ^ "(val) ((" ^ cType ^ ") MLPointer_val(val))") minfo
   | None -> minfo
 
 let genStruct cfg minfo n s =
@@ -51,7 +53,7 @@ let genAPI (cfg, cgstate, minfo) n api =
   | APIStruct s -> cfg, cgstate, genStruct cfg minfo n s
   | APIUnion u -> cfg, cgstate, genUnion cfg minfo n u
   | APIObject o -> genObject cfg cgstate minfo n o
-  | APIInterface i -> genInterface cfg cgstate minfo n i
+  | APIInterface _(*i*) -> cfg, cgstate, minfo (*TODO genInterface cfg cgstate minfo n i*)
 
 (* code_gen_config*cgstate*module_info -> name -> api -> code_gen_config*cgstate*module_info  *)
 let genAPIModule (cfg, cgstate, minfo) n api =
@@ -60,20 +62,47 @@ let genAPIModule (cfg, cgstate, minfo) n api =
     
 (* code_gen_config*cgstate*module_info -> Map (name, api) -> code_gen_config*cgstate*module_info *)
 let genModule' (cfg, cgstate, minfo) apis =
-  let listapi = NameMap.to_seq apis |> List.of_seq in
-  let tmp1 = List.fold_left (fun (cfg, cgstate, minfo) (nm, api) -> genAPIModule (cfg, cgstate, minfo) nm api) (cfg, cgstate, minfo) listapi in
-  let tmp2 = submodule tmp1 {modulePathToList = ["Callbacks"]} in
-  cfg, cgstate, tmp2
-
+  let listapi = NameMap.to_seq apis |> List.of_seq 
+    |> List.map checkClosureDestructors 
+    |> List.map dropDuplicatedFields
+    |> List.map detectGObject
+    |> List.map guessPropertyNullability
+    |> List.map fixAPIStructs
+  in let listApiOption = List.map (fun (x, y) -> x, dropMovedItems y) listapi in
+  let listApiOption = List.map (fun (x, y) -> 
+    match y with
+    | None -> None
+    | Some y -> Some (x, y)) listApiOption in
+  let listapi = List.filter_map (fun x -> x) listApiOption in
+  let listapi = List.filter (fun x -> 
+  not (List.mem (fst x) [
+    {namespace = "GLib"; name = "Array"};
+    {namespace = "GLib"; name = "Error"};
+    {namespace = "GLib"; name = "HashTable"};
+    {namespace = "GLib"; name = "List"};
+    {namespace = "GLib"; name = "SList"};
+    {namespace = "GLib"; name = "Variant"};
+    {namespace = "GObject"; name = "Value"};
+    {namespace = "GObject"; name = "Closure"};
+  ] )) listapi
+  in 
+  let cfg, cgstate, minfo = List.fold_left (fun (cfg, cgstate, minfo) (nm, api) -> 
+    genAPIModule (cfg, cgstate, minfo) nm api) (cfg, cgstate, minfo) listapi in
+  let cfg, cgstate, minfo = submodule (cfg, cgstate, minfo) {modulePathToList = ["Callbacks"]} in
+  cfg, cgstate, minfo
 
 
 (*code_gen_config*cgstate*module_info -> Map (name, api) -> code_gen_config*cgstate*module_info *)
-let genModule state apis =
-  (*let embeddedAPIs = NameMap.to_seq api |> c
-  recurseWithAPIs all_apis (genModule' apis)*)
-  (*let allAPIs = minfo.loadedAPIs in*)
-  genModule' state apis
-
+let genModule (cfg, cgstate, minfo) apis =
+  let embeddedAPIs = NameMap.to_seq apis |> List.of_seq |> 
+      List.concat_map extractCallbacksInStruct |> List.to_seq |> NameMap.of_seq
+  in let allAPIs = cfg.loadedAPIs in
+  let f_union _ m1 _ = Some m1 in
+  recurseWithAPIs 
+    (cfg, cgstate, minfo) 
+    (fun (cfg, cgstate, minfo) -> 
+      genModule' (cfg, cgstate, minfo) (NameMap.union f_union apis embeddedAPIs)) 
+    (NameMap.union f_union allAPIs embeddedAPIs)
 
 
 

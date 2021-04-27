@@ -8,7 +8,7 @@ let rec take k xs = match xs with
 
 (*prendo la lista senza l'ultimo elemento, la init di Haskell*)
 (*noLast :: [a] -> [a]*)
-let noLast xs = take (List.length xs -1) xs
+let noLast xs = List.rev xs |> List.tl |> List. rev
 
 
 (*paddo la stringa in input con degli spazi fino ad arrivare ad n*)

@@ -23,6 +23,9 @@ let cTypeErr err =
 
 let ocamlValueToCErr err =
   conversionError "ocamlValueToC" err
+
+let cToOCamlValueErr err =
+  conversionError "cToOCamlValue" err
   
 let getModuleType minfo n =
   let currNs = currentNS minfo in
@@ -380,3 +383,95 @@ let cType cfg tp =
         | None -> cTypeErr "Union without cType")
     end
   | TGValue -> assert false (*in haskell non c'è nel pattern matching, com'è possibile?*)
+
+
+
+  let cToOCamlValue cfg minfo nullable tp =
+    match nullable, tp with
+    | _, None -> minfo, "Unit"
+    | false, Some (TBasicType t) ->
+      begin
+      match t with
+      | TBoolean -> minfo, "Val_bool"
+      | TInt -> minfo, "Val_int"
+      | TUInt -> minfo, "Val_int"
+      | TLong -> minfo, "Val_long"
+      | TULong -> minfo, "Val_long"
+      | TInt8 -> cToOCamlValueErr "TInt8"
+      | TUInt8 -> cToOCamlValueErr "TUInt8"
+      | TInt16 -> cToOCamlValueErr "TInt16"
+      | TUInt16 -> cToOCamlValueErr "TUInt16"
+      | TInt32 -> minfo, "caml_copy_int32"
+      | TUInt32 -> minfo, "caml_copy_int32"
+      | TInt64 -> minfo, "caml_copy_int64"
+      | TUInt64 -> minfo, "caml_copy_int64"
+      | TFloat -> minfo, "caml_copy_double"
+      | TDouble -> minfo, "caml_copy_double"
+      | TUniChar -> minfo, "Val_char"
+      | TGType -> cToOCamlValueErr "TGType"
+      | TUTF8 -> minfo, "Val_string"
+      | TFileName -> minfo, "Val_string"
+      | TPtr -> cToOCamlValueErr "TPtr"
+      | TIntPtr -> cToOCamlValueErr "TIntPtr"
+      | TUIntPtr -> cToOCamlValueErr "TUIntPtr"
+      end
+    | true, Some (TBasicType t) ->
+      begin
+      match t with
+      | TUTF8 -> minfo, "Val_option_string"
+      | TFileName -> minfo, "Val_option_string"
+      | TPtr -> cToOCamlValueErr "TPtr"
+      | TIntPtr -> cToOCamlValueErr "TIntPtr"
+      | TUIntPtr -> cToOCamlValueErr "TUIntPtr"
+      | _ -> raise (CGErrorNotImplemented "(cToOCamlValue) BasicType isn't implemented because this type should not be nullable" )
+      end
+    | _, Some TError -> cToOCamlValueErr "TError"
+    | _, Some TVariant -> cToOCamlValueErr "TVariant"
+    | _, Some TParamSpec -> cToOCamlValueErr "TParamSpec"
+    | _, Some (TCArray (_, _, _, _)) -> cToOCamlValueErr "TCArray"
+    | _, Some (TGArray _) -> cToOCamlValueErr "TGArray"
+    | _, Some (TPtrArray _) -> cToOCamlValueErr "TPtrArray"
+    | _, Some TByteArray -> cToOCamlValueErr "TByteArray"
+    | _, Some (TGList _) -> cToOCamlValueErr "TGList"
+    | _, Some (TGSList _) -> cToOCamlValueErr "TGSList"
+    | _, Some (TGHash (_, _)) -> cToOCamlValueErr "TGHash"
+    | _, Some (TGClosure _) -> cToOCamlValueErr "TGClosure"
+    | false, Some (TInterface n) ->
+      let api = findAPIByName cfg n in
+      begin
+      match api with
+      | APIConst _ -> cToOCamlValueErr "APIConst"
+      | APIFunction _ -> cToOCamlValueErr "APIFunction"
+      | APICallback _ -> cToOCamlValueErr "APICallback"
+      | APIEnum _ ->
+        let minfo = addCDep minfo (n.namespace ^ "Enums") in
+        minfo, valEnum n
+      | APIFlags _ -> cToOCamlValueErr "APIFlags"
+      | APIInterface _ ->
+        let minfo = addCDep minfo (n.namespace ^ n.name) in
+        minfo, valInterface n
+      | APIObject _ ->
+        let minfo = addCDep minfo (n.namespace ^ n.name) in
+        minfo, valObject n
+      | APIStruct _ -> cToOCamlValueErr "APIStruct"
+      | APIUnion _ -> cToOCamlValueErr "APIUnion"
+      end
+    | true, Some (TInterface n) ->
+      let api = findAPIByName cfg n in
+      begin
+      match api with
+      | APIConst _ -> cToOCamlValueErr "APIConst"
+      | APIFunction _ -> cToOCamlValueErr "APIFunction"
+      | APICallback _ -> cToOCamlValueErr "APICallback"
+      | APIEnum _ -> cToOCamlValueErr "APIEnum"
+      | APIFlags _ -> cToOCamlValueErr "APIFlags"
+      | APIInterface _ ->
+        let minfo = addCDep minfo (n.namespace ^ n.name) in
+        minfo, valOptInterface n
+      | APIObject _ -> 
+        let minfo = addCDep minfo (n.namespace ^ n.name) in
+        minfo, valOptObject n
+      | APIStruct _ -> cToOCamlValueErr "APIStruct"
+      | APIUnion _ -> cToOCamlValueErr "APIUnion"
+      end
+    | _, Some TGValue -> assert false (*in haskell non c'è nel pattern matching..*)
