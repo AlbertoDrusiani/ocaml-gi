@@ -3,7 +3,17 @@
 (*take :: Num -> [a] -> [a] *)
 let rec take k xs = match xs with
     | [] -> []
-    | x::xs -> if k = 1 then [x] else x::take (k-1) xs;;
+    | x::xs -> if k = 1 then [x] else x::take (k-1) xs
+
+
+let rec takeWhile f l =
+    match l with
+    | [] -> []
+    | x::xs -> 
+      match f x with
+      | true -> x::takeWhile f xs
+      | false -> l
+
 
 
 (*prendo la lista senza l'ultimo elemento, la init di Haskell*)
@@ -58,6 +68,12 @@ let readFile fname =
   let s = really_input_string ch (in_channel_length ch) in
   close_in ch;
   s 
+
+
+let writeFile fname str =
+  let oc = open_out fname in
+  Printf.fprintf oc "%s" str 
+
 
 (*mappa solo gli ultimi n elementi di una funzione*)
 let rec mapNth n fn l =

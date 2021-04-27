@@ -5,6 +5,8 @@ open Naming
 (*open ModulePath*)
 open GIR.BasicTypes
 open Config
+open Util
+open Filename
 
 type code = Code of (code_token list)
 
@@ -423,4 +425,220 @@ let addTypeFile cfg minfo n =
 
 
 
+let getLibName path =
+  match path with
+  | Some path -> 
+    explode path |> List.rev |> takeWhile (fun x -> x != '/') 
+    |> List.rev |> List.to_seq |> String.of_seq
+  | None -> ""
 
+
+let modulePathToFilePath dirPrefix mp ext =
+  let dirPrefix = match dirPrefix with
+  | Some d -> d
+  | None -> ""
+  (*FIXME non mi convince*)
+  in String.concat "" (dirPrefix::mp.modulePathToList) ^ ext
+
+
+
+let paddedLine n s = (String.make (n*4) ' ') ^ s ^ "\n"
+
+(* provo con le stringhe normali invece che buffer o simili *)
+let codeToText (Code seq_) =
+  let rec genCode' i l =
+    match i, l with
+    | _, [] -> ""
+    | n, (Line s) :: rest -> (paddedLine n s) ^ (genCode' n rest)
+    | n, Indent (Code s) :: rest -> (genCode' (n + 1) s) ^ (genCode' n rest)
+    | n, Group (Code s) :: rest -> (genCode' n s) ^ (genCode' n rest)
+    | n, IncreaseIndent :: rest -> genCode' (n + 1) rest
+  in genCode' 0 seq_
+
+
+let qualifiedModuleName mp =
+  match mp.modulePathToList with
+  | [ns; "Objects"; o] -> ns ^ "." ^ o
+  | [ns; "Interfaces"; i] -> ns ^ "." ^ i
+  | [ns; "Structs"; s] -> ns ^ "." ^ s
+  | [ns; "Unions"; u] -> ns ^ "." ^ u
+  | _ -> dotModulePath mp
+
+
+let importedDeps mp l =
+  match mp.modulePathToList, l with
+  | _, [] -> ""
+  | prefix, deps -> 
+
+    let importSource mp =
+      match mp.modulePathToList with
+      | [_; "Callbacks"] -> false
+      | mp -> (take (List.length prefix) mp) = prefix
+
+    in let toImport dep =
+      let impSt =
+        if importSource dep
+        then "import {-# SOURCE #-} qualified "
+        else "import qualified "
+      in impSt ^ dotWithPrefix dep ^ " as " ^ qualifiedModuleName dep
+
+    in String.concat "\n" (List.map toImport deps)
+
+
+let genTStubs minfo = codeToText minfo.tCode
+
+let genHStubs minfo = codeToText minfo.hCode
+
+let genCStubs minfo = codeToText minfo.cCode
+
+let genGModule minfo = codeToText minfo.gCode
+
+
+
+let commonCImports =
+  String.concat "\n"
+  ["#include <string.h>"
+  ; "#include <caml/mlvalues.h>"
+  ; "#include <caml/alloc.h>"
+  ; "#include <caml/memory.h>"
+  ; "#include <caml/callback.h>"
+  ; "#include <caml/fail.h>"
+  ; "#include \"wrappers.h\""
+  ; "#include \"ml_glib.h\""
+  ; "#include \"ml_gobject.h\""]
+
+
+let cImports currLib = "#include \"" ^ String.lowercase_ascii currLib ^ "_includes.h\""
+
+
+let addCFile state file = file::state
+
+let writeModuleInfo state isVerbose dirPrefix _dependencies minfo =
+  let mapElems = List.map (fun (_, v) -> v) (StringMap.bindings minfo.submodules) in
+  let _submodulePaths = List.map (fun v -> v.modulePath) mapElems in
+  let _submoduleExports = List.map dotWithPrefix _submodulePaths in
+  (*let _pkgRoot = _ in*)
+  let nspace = getLibName dirPrefix in
+  let fname = modulePathToFilePath dirPrefix minfo.modulePath "" in
+  let dirname = Filename.dirname fname in
+  let code = codeToText minfo.moduleCode in
+  (*let _deps = importedDeps *)
+  if isVerbose
+  then prerr_endline (dotWithPrefix (minfo.modulePath) ^ " -> " ^ fname);
+
+  let _ = Sys.command ("mkdir -p " ^ dirname) in
+
+  let _ = 
+  match isCodeEmpty minfo.moduleCode with
+  | true -> ()
+  | false -> writeFile (fname ^ ".ml") (String.concat "\n" [code])
+
+  in let _ = 
+  match isCodeEmpty minfo.tCode with
+  | true -> ()
+  | false -> writeFile (fname ^ "T.ml") (String.concat "\n" [genTStubs minfo])
+
+  in let hPrefix = Option.value dirPrefix ~default:"" ^ dir_sep ^ "include" in
+  let hName = moduleName minfo.modulePath in
+  let hStubsFile = hPrefix ^ dir_sep ^ ("GI" ^ nspace ^ hName ^ ".h") in
+
+  let _ = Sys.command ("mkdir -p" ^ hPrefix) in
+  let _ = writeFile hStubsFile (String.concat "\n" [cImports nspace; commonCImports; genHStubs minfo]) in
+
+  let state = 
+  match isCodeEmpty minfo.cCode with
+  | true -> state
+  | false ->
+    let cStubsFile = modulePathToFilePath dirPrefix minfo.modulePath ".c" in
+    let deps' = List.filter (fun x -> x != "Widget") (minfo.cDeps |> StringSet.to_seq |> List.of_seq) in
+    let deps = String.concat "\n" (List.map (fun d -> "#include \"GI" ^ d ^ ".h\"") deps') in
+    let state = addCFile state cStubsFile in
+    writeFile cStubsFile (String.concat "\n" [deps; genCStubs minfo]); state
+  
+  in let _ = 
+  match isCodeEmpty minfo.gCode with
+  | true -> ()
+  | false ->
+    let gFileModulepath = minfo.modulePath in
+    let gModuleFile = modulePathToFilePath dirPrefix gFileModulepath "G.ml" in
+    writeFile gModuleFile (String.concat "\n" [genGModule minfo]);
+  
+  in state
+
+
+
+
+let rec writeModuleTree' state verbose_ dirPrefix dependencies minfo =
+  let mapElems = List.map (fun (_, v) -> v) (StringMap.bindings minfo.submodules) in
+  let state, subModulePaths = 
+    List.fold_left (fun (state, l) minfo -> 
+      let t = writeModuleTree' state verbose_ dirPrefix dependencies minfo
+      in fst t, l @ (snd t)) (state,[]) mapElems in
+  let state = writeModuleInfo state verbose_ dirPrefix dependencies minfo in
+  state, dotWithPrefix minfo.modulePath::subModulePaths
+
+
+let genDuneFile libName outputDir cFiles deps =
+  (*FIXME da capire se questa join ci va messo il dir_sep o no*)
+  let duneFilePath = String.concat dir_sep [outputDir; "dune"] in
+  let libs = List.map (fun x -> "GI" ^ x) deps in
+  let pkgConfName =
+    match libName with
+    | "GtkSource" -> "gtksourceview-3.0"
+    | _ -> "gtk+-3.0"
+  in let commonPart =
+    [ 
+      "(library";
+      " (name GI" ^ libName ^ ")";
+      " (public_name GI" ^ libName ^ ")";
+      " (libraries gilablgtk3 " ^ String.concat " " libs ^ ")";
+      ]
+  in let fileContent = 
+    match cFiles with
+    | [] -> String.concat "\n" (commonPart @ [")"])
+    | _ ->
+      String.concat "\n" (
+        [ "(rule";
+          " (targets";
+          "  cflag-" ^ pkgConfName ^ ".sexp";
+          "  clink-" ^ pkgConfName ^ ".sexp";
+          " (action (run dune_config -pkg " ^ pkgConfName ^ " -version 3.18";
+          ] @
+        commonPart @
+        [ " (flags :standard -w -6-7-9-10-27-32-33-34-35-36-50-52 -no-strict-sequence)";
+          " (c_library_flags (:include clink-" ^ pkgConfName ^ ".sexp))";
+          " (foreign_stubs";
+          "  (language c)";
+          "  (names " ^ String.concat " " cFiles ^ ")";
+          "  (include_dirs %{project_root}/include)";
+          "  (flags (:include cflag-" ^ pkgConfName 
+           ^ ".sexp) -I$BASE_OCAML_C $GI_INCLUDES -Wno-deprecated-declarations)))";
+           ]
+
+      )
+  in writeFile duneFilePath fileContent
+
+let writeModuleTree verbose_ dirPrefix minfo dependencies =
+  let modules, cFiles =
+    writeModuleTree' [] verbose_ dirPrefix dependencies minfo in
+  let prefix' = Option.value dirPrefix ~default:"" in
+  let libName = getLibName dirPrefix in
+  let modules' = List.filter (fun m -> List.length (String.split_on_char '.' m) > 2) modules in
+  let regexp = Str.regexp "." in
+  let modulePaths = List.map (
+      fun x -> (Str.global_replace regexp "/" x) |> Filename.dirname |> fun y -> prefix' ^ dir_sep ^ y)
+      modules' |> List.to_seq |> StringSet.of_seq
+  in let dirFileTuple = List.map (fun cFile -> (Filename.dirname cFile, Filename.basename cFile)) cFiles in
+  let cFilesMap = List.fold_left (fun fMap (key, file) -> 
+    let el = StringMap.find_opt key fMap in
+    match el with
+    | None -> StringMap.add key [file] fMap
+    | Some el -> StringMap.add key (file::el) fMap) 
+    StringMap.empty dirFileTuple
+  in let _ =  StringSet.iter (
+    fun path ->
+      let _ = Sys.command ("mkdir -p " ^ path) in
+      let cFileNames = Option.value (StringMap.find_opt path cFilesMap) ~default:[] in
+      genDuneFile libName path cFileNames dependencies 
+      ) modulePaths
+  in modules, StringSet.to_seq modulePaths |> List.of_seq
