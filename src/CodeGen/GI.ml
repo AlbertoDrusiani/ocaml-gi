@@ -30,11 +30,12 @@ let union_f _ v1 _ =
 
 (*per ora non considero gli overrides e le dipendenze*)
 (*string -> string -> bool -> ModuleInfo*)
-let genLibraryCode name version verbosity _(*overrides*) =
+let genLibraryCode name version verbosity (*_overrides*) =
   (*TODO dummy value, da implementare questa parte*)
   (*let ovs = defaultOverrides in*)
   (*let gir(*, girDeps*) = loadRawGIRInfo verbosity name (Some version) (*[]*) (*(ovs.girFixups)*) in*)
   let gir, _ = loadGIRInfo verbosity name (Some version) [] in
+  prerr_endline ("Parsing di " ^ name ^ " completato!");
   (*let dependencies = List.map (fun x -> x.girNSName ) girDeps in*)
   (*let apis, deps = filterAPIsAndDeps (*ovs*) gir (*girDeps*) in*)
   let apis = gir.girAPIs |> List.to_seq |> NameMap.of_seq in
@@ -58,24 +59,24 @@ let genLibraryCode name version verbosity _(*overrides*) =
 
 (* bool -> library -> unit *)
 let genBindings verbosity library =
-  let inheritedOverrides = [] in
+  (*let inheritedOverrides = [] in*)
   let outputDir = "bindings" ^ dir_sep ^ library.name in
   let dirExists = file_exists outputDir in
   begin
   if dirExists
   then removeDirectoryContents outputDir 
   end;
-  let givenOvs = 
+  (*let givenOvs = 
     match library.overridesFile with
     | Some x ->  Some {overrideTag = x; overrideText = readFile (x)}
     | None -> None
   in let ovs =
     match givenOvs with
       | Some x -> [x] @ inheritedOverrides
-      | None -> inheritedOverrides
-  in let m(*  deps'*) = genLibraryCode library.name library.version verbosity ovs in
+      | None -> inheritedOverrides*)
+  let m(*  deps'*) = genLibraryCode library.name library.version verbosity (*ovs*) in
   let _ = writeModuleTree verbosity (Some outputDir) m [] in
-  let _ = genConfigFiles (Some outputDir) library.name givenOvs in
+  (*let _ = genConfigFiles (Some outputDir) library.name givenOvs in*)
   Sys.command ("cp -rf " ^ "base-ocaml/tools " ^ (outputDir ^ dir_sep ^ "tools"))
 
 

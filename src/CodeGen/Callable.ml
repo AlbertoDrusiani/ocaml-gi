@@ -178,7 +178,7 @@ let genMlMacro cfg minfo mn cSymbol callable =
   let nArgs = List.length callable.args in
   let outArgs = callableHOutArgs callable in
   if List.for_all (fun a -> a.direction = DirectionInout) callable.args
-  then raise (CGErrorNotImplemented "genMlMacro: inout parameters are not implemented yet")
+  then raise (CGError (CGErrorNotImplemented "genMlMacro: inout parameters are not implemented yet"))
   else 
     if outArgs != []
     then 

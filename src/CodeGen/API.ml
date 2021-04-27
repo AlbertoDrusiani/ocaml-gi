@@ -452,12 +452,12 @@ let gtypeInterfaceListPrereqs =l
 
 
 
-let run verbose ns version =
+(*let run verbose ns version =
   let _ = loadRawGIRInfo verbose ns  version in
   prerr_endline ("PARSING COMPLETATO: " ^ ns);;
 
 
-run true "Gtk" None;;
+run true "Gtk" None;;*)
 
 
 

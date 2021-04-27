@@ -108,10 +108,15 @@ type code_gen_config = {
   (*c2hMap: TODO da implementare il modulo gtk-doc*) 
 }
 
-exception CGErrorNotImplemented of string
-exception CGErrorBadIntrospectionInfo of string
-exception CGErrorMissingInfo of string
 
+
+type cg_error =
+  | CGErrorNotImplemented of string
+  | CGErrorBadIntrospectionInfo of string
+  | CGErrorMissingInfo of string
+
+
+exception CGError of cg_error
 
 type named_tyvar =
   | SingleCharTyvar of char
@@ -150,6 +155,18 @@ let cleanInfo info =
    * nell'evalCodegen in Haskell, potevo chiamarla così ma qua non valuto niente*)
   (* config -> Map (name, api) -> module_path -> (codegen_config, cgstate, module_info)*)
   
+
+
+let notImplementedError s = raise (CGError (CGErrorNotImplemented s))
+
+let badIntroError s = raise (CGError (CGErrorBadIntrospectionInfo s))
+
+let missingInfoError s = raise (CGError (CGErrorMissingInfo s))
+
+
+
+
+
 let setContext cfg apis mPath =
     let initialInfo = emptyModule mPath in
     let cfg' = { hConfig = cfg; loadedAPIs = apis; (*c2hMap = cToHaskellMap (NameMap.to_seq apis |> List.of_seq)*)} in
@@ -184,6 +201,21 @@ let rec mergeInfoState oldState newState =
 and mergeInfo oldInfo newInfo =
   let info = mergeInfoState oldInfo newInfo in
   { info with moduleCode = Code (getCode (oldInfo.moduleCode) @ getCode (newInfo.moduleCode))}
+
+
+let handleCGExc (cfg, cgstate, oldInfo) fallback action =
+  let info = cleanInfo oldInfo in
+  try
+    let (cfg, cgstate, newInfo) = Lazy.force (action cfg cgstate info) in
+    cfg, cgstate, mergeInfo oldInfo newInfo
+  with CGError e -> Lazy.force (fallback cfg cgstate oldInfo e)
+
+
+let describeCGError error =
+  match error with
+  | CGErrorNotImplemented e -> "Not implemented: " ^ e
+  | CGErrorBadIntrospectionInfo e -> "Bad introspection data: " ^ e
+  | CGErrorMissingInfo e -> "Missing info: " ^ e
 
 
 let currentNS minfo =

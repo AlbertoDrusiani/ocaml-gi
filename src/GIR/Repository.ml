@@ -10,12 +10,15 @@ let girFilePath name version path =
 let girFile' name version path =
   match version with
   | Some v -> let filepath = girFilePath name v path in
+    prerr_endline ("girFIle', dentro al primo Some");
+    prerr_endline (filepath);
     begin
      match file_exists filepath with
      | true -> Some filepath
-     | false -> None
+     | false -> prerr_endline ("SUKA VEKIO"); None
     end
   | None ->
+     prerr_endline ("girFIle', dentro al primo None");
      match is_directory path with
                (* creo la lista dei nomi dei file nella cartella con i file .gir, rimuovendo le estensioni e il path*)
      | true -> let repositories = List.map (fun x -> basename (remove_extension x)) (Array.to_list (readdir path)) in

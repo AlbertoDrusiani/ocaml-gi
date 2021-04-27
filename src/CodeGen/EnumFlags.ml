@@ -20,9 +20,9 @@ let hashVariant s =
 
 let genEnumOrFlags minfo n e enumOrFlag =
   if (sizeof uint) != 4
-  then raise (CGErrorNotImplemented ("Unsupported uint size: " ^ string_of_int (sizeof uint)));
+  then raise (CGError (CGErrorNotImplemented ("Unsupported uint size: " ^ string_of_int (sizeof uint))));
   if e.enumStorageBytes != 4
-  then raise (CGErrorNotImplemented ("Storage of size /= 4 not supported: " ^ string_of_int (e.enumStorageBytes)));
+  then raise (CGError (CGErrorNotImplemented ("Storage of size /= 4 not supported: " ^ string_of_int (e.enumStorageBytes))));
   let enumName = upperName n |> camelCaseToSnakeCase |> escapeOCamlReserved in
   let memberNames = List.map (fun x -> escapeOCamlReserved (String.uppercase_ascii (x.enumMemberName))) e.enumMembers in
   let variants = List.map (fun x -> "`" ^ x) memberNames in
@@ -78,14 +78,18 @@ let genEnumOrFlags minfo n e enumOrFlag =
  
 
 let genEnum cfg cgstate minfo n e =
-  try
+  let action = fun cfg cgstate minfo -> lazy (cfg, cgstate, genEnumOrFlags minfo n e Enum) in
+  let fallback = fun cfg cgstate minfo e -> lazy (cfg, cgstate, commentLine minfo ("Could not generate: " ^ describeCGError e)) in
+  handleCGExc (cfg, cgstate, minfo) fallback action
+  (*try
     cfg, cgstate, genEnumOrFlags minfo n e Enum
-  with Failure exc -> cfg, cgstate, (commentLine minfo ("Could not generate: " ^ exc))
+  with Failure exc -> cfg, cgstate, (commentLine minfo ("Could not generate: " ^ exc))*)
 
 
-let genFlags cfg cgstate minfo n f =
-  match f with
-  | Flags enum ->
-  try
+let genFlags cfg cgstate minfo n (Flags enum) =
+  let action = fun cfg cgstate minfo -> lazy (cfg, cgstate, genEnumOrFlags minfo n enum Flag) in
+  let fallback = fun cfg cgstate minfo e -> lazy (cfg, cgstate, commentLine minfo ("Could not generate: " ^ describeCGError e)) in
+  handleCGExc (cfg, cgstate, minfo) fallback action
+ (* try
     cfg, cgstate, genEnumOrFlags minfo n enum Flag
-  with Failure exc -> cfg, cgstate, (commentLine minfo ("Could not generate: " ^ exc))
+  with Failure exc -> cfg, cgstate, (commentLine minfo ("Could not generate: " ^ exc))*)

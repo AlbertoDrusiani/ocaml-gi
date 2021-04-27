@@ -3,7 +3,7 @@
 open GI
 
 let glibLib = {
-    name = "Glib";
+    name = "GLib";
     version = "2.0";
     overridesFile = Some "overrides/GLib.overrides";
 }

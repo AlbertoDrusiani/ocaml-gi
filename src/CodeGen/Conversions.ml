@@ -12,7 +12,7 @@ type expose_closures =
 
 
 let conversionError converter case =
-  raise (CGErrorNotImplemented ("This " ^ converter ^ " (" ^ case ^ ") isn't implemented yet"))
+  raise (CGError (CGErrorNotImplemented ("This " ^ converter ^ " (" ^ case ^ ") isn't implemented yet")))
 
 
 let ocamlDataConvErr err =
@@ -307,7 +307,7 @@ let outParamOcamlType cfg cgstate minfo t =
     | APIEnum _ -> cgstate, handleEnum ocamlName
     | APIInterface _ -> handleObj n
     | APIObject _ -> handleObj n
-    | _ -> raise (CGErrorNotImplemented "(outParamOcamlType) can't handle this type")
+    | _ -> raise (CGError (CGErrorNotImplemented "(outParamOcamlType) can't handle this type"))
     end
   | TGValue -> assert false (*in haskell non c'è nel pattern matching, com'è possibile?*)
 
@@ -423,7 +423,7 @@ let cType cfg tp =
       | TPtr -> cToOCamlValueErr "TPtr"
       | TIntPtr -> cToOCamlValueErr "TIntPtr"
       | TUIntPtr -> cToOCamlValueErr "TUIntPtr"
-      | _ -> raise (CGErrorNotImplemented "(cToOCamlValue) BasicType isn't implemented because this type should not be nullable" )
+      | _ -> raise (CGError (CGErrorNotImplemented "(cToOCamlValue) BasicType isn't implemented because this type should not be nullable" ))
       end
     | _, Some TError -> cToOCamlValueErr "TError"
     | _, Some TVariant -> cToOCamlValueErr "TVariant"
