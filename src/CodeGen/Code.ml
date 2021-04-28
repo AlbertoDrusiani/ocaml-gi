@@ -203,6 +203,23 @@ and mergeInfo oldInfo newInfo =
   { info with moduleCode = Code (getCode (oldInfo.moduleCode) @ getCode (newInfo.moduleCode))}
 
 
+
+let evalCodeGen cfg apis mPath action =
+  let initialInfo = emptyModule mPath in
+  let cfg' = {
+    hConfig = cfg;
+    loadedAPIs = apis;
+    (*c2hMap =*) 
+  }
+  in action (cfg', emptyCGState, initialInfo)
+
+
+
+let genCode cfg apis mPath action =
+  let _, _, minfo = evalCodeGen cfg apis mPath action in
+  minfo 
+
+
 let handleCGExc (cfg, cgstate, oldInfo) fallback action =
   let info = cleanInfo oldInfo in
   try
@@ -228,21 +245,22 @@ let addSubmodule minfo mName smInfo =
   | false -> {minfo with submodules = StringMap.add mName smInfo minfo.submodules}
 
 
-(*TODO qua viene fatta la runCodeGen e può sollevarsi un errore, gestisco in seguito*)
-(*FIXME sta roba è bacatissima sicuro, manca la gestione del cgstate e la runcodegen come funziona?*)
-(* code_gen_config -> cgstate -> module_info -> string -> (cfg * cgstate *)
-let submodule' (cfg, cgstate, minfo) f mName =
+let submodule' (cfg, cgstate, minfo) mName action =
   let oldInfo = minfo in
   let info = emptyModule ({modulePathToList = oldInfo.modulePath.modulePathToList @ [mName]}) in
-  let _, _, smInfo = f (cfg, emptyCGState, info) in
+  let _, _, smInfo = action (cfg, emptyCGState, info) in
   cfg, cgstate, (addSubmodule oldInfo mName smInfo)
 
 
 (* code_gen_config*cgstate*module_info -> module_path -> (cfg * cgstate * minfo *)
-let rec submodule (cfg, cgstate, minfo) mPath =
+let rec submodule (cfg, cgstate, minfo) mPath action =
   match mPath.modulePathToList with
-  | [] -> cfg, cgstate, minfo
-  | m::ms -> submodule' (cfg, cgstate, minfo) (fun (cfg, cgstate, minfo) -> submodule (cfg, cgstate, minfo) {modulePathToList = ms}) m
+  | [] -> action (cfg, cgstate, minfo)
+  | m::ms -> 
+    submodule' (cfg, cgstate, minfo) m (fun (cfg, cgstate, minfo) -> submodule (cfg, cgstate, minfo) {modulePathToList = ms} action)
+  
+  
+  (*(fun (cfg, cgstate, minfo) -> submodule (cfg, cgstate, minfo) {modulePathToList = ms}) m*)
 
 
 let addCDep minfo dep =
@@ -478,14 +496,16 @@ let paddedLine n s = (String.make (n*4) ' ') ^ s ^ "\n"
 
 (* provo con le stringhe normali invece che buffer o simili *)
 let codeToText (Code seq_) =
+  prerr_endline("____Inizio CodeToText");
   let rec genCode' i l =
     match i, l with
     | _, [] -> ""
-    | n, (Line s) :: rest -> (paddedLine n s) ^ (genCode' n rest)
+    | n, (Line s) :: rest -> prerr_endline ("###LINEA: " ^ s); (paddedLine n s) ^ (genCode' n rest)
     | n, Indent (Code s) :: rest -> (genCode' (n + 1) s) ^ (genCode' n rest)
     | n, Group (Code s) :: rest -> (genCode' n s) ^ (genCode' n rest)
     | n, IncreaseIndent :: rest -> genCode' (n + 1) rest
-  in genCode' 0 seq_
+  in 
+  genCode' 0 seq_
 
 
 let qualifiedModuleName mp =
@@ -548,15 +568,17 @@ let addCFile state file = file::state
 let writeModuleInfo state isVerbose dirPrefix _dependencies minfo =
   let mapElems = List.map (fun (_, v) -> v) (StringMap.bindings minfo.submodules) in
   let _submodulePaths = List.map (fun v -> v.modulePath) mapElems in
+  prerr_endline ("Il module_info che sto per scrivere ha module path: " ^ String.concat "" minfo.modulePath.modulePathToList);
   let _ = List.iter (fun x -> prerr_endline ("subModulePath: " ^ String.concat " " x.modulePathToList))_submodulePaths in
   let _submoduleExports = List.map dotWithPrefix _submodulePaths in
   (*let _pkgRoot = _ in*)
   let nspace = getLibName dirPrefix in
   let fname = modulePathToFilePath dirPrefix minfo.modulePath "" in
-  prerr_endline ("dirPrefix è: " ^ Option.get dirPrefix);
-  prerr_endline ("fname è: " ^ fname);
+  (*prerr_endline ("dirPrefix è: " ^ Option.get dirPrefix);
+  prerr_endline ("fname è: " ^ fname);*)
   let dirname = Filename.dirname fname in
   let code = codeToText minfo.moduleCode in
+  prerr_endline ("Fine codeToText codice normale");
   (*let _deps = importedDeps *)
   if isVerbose
   then prerr_endline (dotWithPrefix (minfo.modulePath) ^ " -> " ^ fname);
@@ -588,6 +610,8 @@ let writeModuleInfo state isVerbose dirPrefix _dependencies minfo =
   let _ = Sys.command ("mkdir -p " ^ hPrefix) in
   (*prerr_endline ("hstubsFile: " ^ hStubsFile);*)
   let _ = writeFile hStubsFile (String.concat "\n" [cImports nspace; commonCImports; genHStubs minfo]) in
+  prerr_endline ("Fine codeToText hStubs");
+
   let _ = 
   match isCodeEmpty minfo.cCode with
   | true -> state
@@ -617,6 +641,7 @@ let hdsafe l =
 
 let rec writeModuleTree' state verbose_ dirPrefix dependencies minfo =
   prerr_endline ("Entro nella writeModuleTree");
+  prerr_endline ("Sono nella moduleTree e sto lavorando sul modulo: " ^ String.concat "" minfo.modulePath.modulePathToList);
   prerr_endline ("state: " ^ String.concat "" state);
   let mapElems = List.map (fun (_, v) -> v) (StringMap.bindings minfo.submodules) in
   prerr_endline ("La lista di elementi è lunga: " ^ string_of_int (List.length mapElems));

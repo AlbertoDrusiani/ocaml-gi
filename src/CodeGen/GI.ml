@@ -24,9 +24,8 @@ let union_f _ v1 _ =
   Some v1
 
 
-(*let genCode cfg apis mPath cg =
-  evalCodeGen cfg apis mPath cg
-*)
+
+
 
 (*per ora non considero gli overrides e le dipendenze*)
 (*string -> string -> bool -> ModuleInfo*)
@@ -42,9 +41,9 @@ let genLibraryCode name version verbosity (*_overrides*) =
   (*let allAPIs = NameMap.union union_f apis deps in*)
   let cfg = {modName = name; verbose = verbosity; (*overrides = ovs*)} in
   (*genCode cfg allAPIs (toModulePath name) (genModule apis), dependencies*)
-  let cfg, cgstate, minfo = setContext cfg apis (toModulePath name) in
-  let _, _, minfo = genModule (cfg, cgstate, minfo) apis in
-  minfo
+  (*let cfg, cgstate, minfo = setContext cfg apis (toModulePath name) in*)
+  genCode cfg apis (toModulePath name) (fun (cfg, cgstate, minfo) -> genModule (cfg, cgstate, minfo) apis)
+
 
   
   let genConfigFiles outputDir modName _maybeGiven =
@@ -60,11 +59,12 @@ let genLibraryCode name version verbosity (*_overrides*) =
 (* bool -> library -> unit *)
 let genBindings verbosity library =
   (*let inheritedOverrides = [] in*)
-  let outputDir = "../../bindings" ^ dir_sep ^ library.name in
+  let outputDir = "bindings" ^ dir_sep ^ library.name in
   let dirExists = file_exists outputDir in
   begin
   if dirExists
   then removeDirectoryContents outputDir 
+  else prerr_endline "COGLIONE";
   end;
   (*let givenOvs = 
     match library.overridesFile with

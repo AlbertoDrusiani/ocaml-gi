@@ -10,13 +10,15 @@ open EnumFlags
 open Object
 open Struct
 open Fixups
+open ModulePath
 
 (*let genFunction n f =*)
 
 let genUnionCasts minfo n u =
   let mbCType = u.unionCType in
   match mbCType with
-  | Some cType -> hline ("#define" ^ (structVal n) ^ "(val) ((" ^ cType ^ ") MLPointer_val(val))") minfo
+  | Some cType -> 
+  hline ("#define" ^ (structVal n) ^ "(val) ((" ^ cType ^ "*) MLPointer_val(val))") minfo
   | None -> minfo
   (*TODO da sistemare asterisco da escapare e da capire come restituire unit*)
 
@@ -30,8 +32,12 @@ let genStructCasts minfo n s =
   let mbCType = s.structCType in
   match mbCType with
   | Some "GdkAtom" -> hline ("#define " ^ (structVal n) ^ "(val) ((GdkAtom) MLPointer_val(val))") minfo
-  | Some cType -> hline ("define " ^ (structVal n) ^ "(val) ((" ^ cType ^ ") MLPointer_val(val))") minfo
+      (*commento per ricordarmi dov'è AsyncQueue DEBUG*)
+  | Some cType -> 
+  prerr_endline ("CULOOOO" ^ String.concat " " minfo.modulePath.modulePathToList);
+  hline ("#define " ^ (structVal n) ^ "(val) ((" ^ cType ^ "*) MLPointer_val(val))") minfo
   | None -> minfo
+
 
 let genStruct cfg minfo n s =
   if not(ignoreStruct n s)
@@ -57,8 +63,7 @@ let genAPI (cfg, cgstate, minfo) n api =
 
 (* code_gen_config*cgstate*module_info -> name -> api -> code_gen_config*cgstate*module_info  *)
 let genAPIModule (cfg, cgstate, minfo) n api =
-  submodule (genAPI (cfg, cgstate, minfo) n api) (submoduleLocation n api)
-
+  submodule (cfg, cgstate, minfo) (submoduleLocation n api) (fun (cfg, cgstate, minfo) -> genAPI (cfg, cgstate, minfo) n api) 
     
 (* code_gen_config*cgstate*module_info -> Map (name, api) -> code_gen_config*cgstate*module_info *)
 let genModule' (cfg, cgstate, minfo) apis =
@@ -88,7 +93,7 @@ let genModule' (cfg, cgstate, minfo) apis =
   in 
   let cfg, cgstate, minfo = List.fold_left (fun (cfg, cgstate, minfo) (nm, api) -> 
     genAPIModule (cfg, cgstate, minfo) nm api) (cfg, cgstate, minfo) listapi in
-  let cfg, cgstate, minfo = submodule (cfg, cgstate, minfo) {modulePathToList = ["Callbacks"]} in
+  let cfg, cgstate, minfo = submodule (cfg, cgstate, minfo) {modulePathToList = ["Callbacks"]} (fun (cfg, cgstate, minfo) -> cfg, cgstate, minfo) in
   cfg, cgstate, minfo
 
 
