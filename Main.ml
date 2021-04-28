@@ -1,6 +1,6 @@
 
 
-open GI
+open CG.GI
 
 let glibLib = {
     name = "GLib";

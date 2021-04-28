@@ -470,7 +470,7 @@ let modulePathToFilePath dirPrefix mp ext =
   | Some d -> d
   | None -> ""
   (*FIXME non mi convince*)
-  in String.concat "" (dirPrefix::mp.modulePathToList) ^ ext
+  in String.concat dir_sep (dirPrefix::mp.modulePathToList) ^ ext
 
 
 
@@ -548,10 +548,13 @@ let addCFile state file = file::state
 let writeModuleInfo state isVerbose dirPrefix _dependencies minfo =
   let mapElems = List.map (fun (_, v) -> v) (StringMap.bindings minfo.submodules) in
   let _submodulePaths = List.map (fun v -> v.modulePath) mapElems in
+  let _ = List.iter (fun x -> prerr_endline ("subModulePath: " ^ String.concat " " x.modulePathToList))_submodulePaths in
   let _submoduleExports = List.map dotWithPrefix _submodulePaths in
   (*let _pkgRoot = _ in*)
   let nspace = getLibName dirPrefix in
   let fname = modulePathToFilePath dirPrefix minfo.modulePath "" in
+  prerr_endline ("dirPrefix è: " ^ Option.get dirPrefix);
+  prerr_endline ("fname è: " ^ fname);
   let dirname = Filename.dirname fname in
   let code = codeToText minfo.moduleCode in
   (*let _deps = importedDeps *)
@@ -565,19 +568,27 @@ let writeModuleInfo state isVerbose dirPrefix _dependencies minfo =
   | true -> ()
   | false -> writeFile (fname ^ ".ml") (String.concat "\n" [code])
 
-  in let _ = 
+
+  in 
+  let _ = 
   match isCodeEmpty minfo.tCode with
   | true -> ()
   | false -> writeFile (fname ^ "T.ml") (String.concat "\n" [genTStubs minfo])
 
   in let hPrefix = Option.value dirPrefix ~default:"" ^ dir_sep ^ "include" in
+
   let hName = moduleName minfo.modulePath in
+  (*prerr_endline ("dirPrefix: " ^ Option.get dirPrefix);
+  prerr_endline ("hPrefix: " ^ hPrefix);
+  prerr_endline ("dir_sep: " ^ dir_sep);
+  prerr_endline ("nspace: " ^ nspace);
+  prerr_endline ("hName: " ^ hName);*)
   let hStubsFile = hPrefix ^ dir_sep ^ ("GI" ^ nspace ^ hName ^ ".h") in
 
-  let _ = Sys.command ("mkdir -p" ^ hPrefix) in
+  let _ = Sys.command ("mkdir -p " ^ hPrefix) in
+  (*prerr_endline ("hstubsFile: " ^ hStubsFile);*)
   let _ = writeFile hStubsFile (String.concat "\n" [cImports nspace; commonCImports; genHStubs minfo]) in
-
-  let state = 
+  let _ = 
   match isCodeEmpty minfo.cCode with
   | true -> state
   | false ->
@@ -595,17 +606,30 @@ let writeModuleInfo state isVerbose dirPrefix _dependencies minfo =
     let gModuleFile = modulePathToFilePath dirPrefix gFileModulepath "G.ml" in
     writeFile gModuleFile (String.concat "\n" [genGModule minfo]);
   
+  (*in assert false*)
   in state
 
 
-
+let hdsafe l =
+  match l with
+  | [] -> []
+  | x -> [List.hd x]
 
 let rec writeModuleTree' state verbose_ dirPrefix dependencies minfo =
+  prerr_endline ("Entro nella writeModuleTree");
+  prerr_endline ("state: " ^ String.concat "" state);
   let mapElems = List.map (fun (_, v) -> v) (StringMap.bindings minfo.submodules) in
+  prerr_endline ("La lista di elementi è lunga: " ^ string_of_int (List.length mapElems));
   let state, subModulePaths = 
     List.fold_left (fun (state, l) minfo -> 
+      prerr_endline ("fold");
       let t = writeModuleTree' state verbose_ dirPrefix dependencies minfo
-      in fst t, l @ (snd t)) (state,[]) mapElems in
+      in fst t, l @ (snd t)) 
+      (state,[]) (hdsafe mapElems)
+  in
+  prerr_endline ("state: " ^ String.concat "" state);
+  prerr_endline ("subModulePaths: " ^ String.concat " " subModulePaths);
+  prerr_endline ("ESCO DALLA FOLDDD");
   let state = writeModuleInfo state verbose_ dirPrefix dependencies minfo in
   state, dotWithPrefix minfo.modulePath::subModulePaths
 

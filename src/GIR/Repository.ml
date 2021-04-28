@@ -15,7 +15,7 @@ let girFile' name version path =
     begin
      match file_exists filepath with
      | true -> Some filepath
-     | false -> prerr_endline ("SUKA VEKIO"); None
+     | false -> None
     end
   | None ->
      prerr_endline ("girFIle', dentro al primo None");

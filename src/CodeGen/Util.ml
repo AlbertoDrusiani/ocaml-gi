@@ -12,7 +12,7 @@ let rec takeWhile f l =
     | x::xs -> 
       match f x with
       | true -> x::takeWhile f xs
-      | false -> l
+      | false -> []
 
 
 
@@ -72,7 +72,8 @@ let readFile fname =
 
 let writeFile fname str =
   let oc = open_out fname in
-  Printf.fprintf oc "%s" str 
+  let _ = Printf.fprintf oc "%s" str in
+  close_out oc
 
 
 (*mappa solo gli ultimi n elementi di una funzione*)

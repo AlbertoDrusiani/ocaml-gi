@@ -1,6 +1,5 @@
 (library
   (name GIR)
-  (public_name GIR)
   (libraries gobject-introspection xml-light)
 )
 

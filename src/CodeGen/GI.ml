@@ -60,7 +60,7 @@ let genLibraryCode name version verbosity (*_overrides*) =
 (* bool -> library -> unit *)
 let genBindings verbosity library =
   (*let inheritedOverrides = [] in*)
-  let outputDir = "bindings" ^ dir_sep ^ library.name in
+  let outputDir = "../../bindings" ^ dir_sep ^ library.name in
   let dirExists = file_exists outputDir in
   begin
   if dirExists

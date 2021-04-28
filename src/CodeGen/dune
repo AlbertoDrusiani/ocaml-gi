@@ -1,5 +1,5 @@
-(executable
-  (name Main)
+(library
+  (name CG)
   (libraries GIR)
 )
 
