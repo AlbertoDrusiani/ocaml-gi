@@ -74,16 +74,16 @@ and gir_rule =
 
 (* map alias type -> gir_namespace -> xml -> gir_namespace *)
 let parseNSElement aliases ns element =
-  prerr_endline ("################ NSElement: " ^ Xml.tag element ^ " con name = " ^ Xml.attrib element "name");
+  (*prerr_endline ("################ NSElement: " ^ Xml.tag element ^ " con name = " ^ Xml.attrib element "name");*)
   let parse name api =
     let maybeCType = match lookupAttrWithNamespace CGIRNS "type" element with
                      | Some ctype -> (ctype, name) :: ns.nsCTypes
                      | None -> ns.nsCTypes
     in {ns with nsAPIs = (name, api)::ns.nsAPIs; nsCTypes = maybeCType} in 
   match lookupAttr "introspectable" element with
-  | Some "0" -> prerr_endline ("Elemento da NON parsare"); ns
+  | Some "0" -> (*prerr_endline ("Elemento da NON parsare");*) ns
   | _ -> 
-    prerr_endline ("_______PARSE " ^ (localName (Xml.tag element)) ^ "_______");
+    (*prerr_endline ("_______PARSE " ^ (localName (Xml.tag element)) ^ "_______");*)
     match localName (Xml.tag element) with
     | "alias" -> ns
     | "constant" -> begin
@@ -133,7 +133,7 @@ let parseNamespace aliases element =
   if Option.is_none name || Option.is_none version 
   then None
   else
-   let _ =  prerr_endline ("Inizio il parsing del namespace: " ^ Option.get name) in
+   (*let _ =  prerr_endline ("Inizio il parsing del namespace: " ^ Option.get name) in*)
    let ns = { nsName = Option.get name;
              nsVersion = Option.get version;
              nsAPIs = [];
@@ -155,7 +155,7 @@ let parsePackage element =
 
 (* Map alias type -> gir_info_parse -> xml -> gir_info_parse *)
 let parseRootElement aliases info element =
-  prerr_endline ("Inizio il parseRootElement: " ^ (Xml.tag element));
+ (* prerr_endline ("Inizio il parseRootElement: " ^ (Xml.tag element));*)
   match localName (Xml.tag element) with
   | "include" -> {info with girIPIncludes = parseInclude element :: info.girIPIncludes;}
   | "package" -> {info with girIPPackage = parsePackage element :: info.girIPPackage;}

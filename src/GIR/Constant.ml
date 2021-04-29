@@ -14,7 +14,7 @@ type constant = {
 
 
 let parseConstant ns aliases el =
-  prerr_endline ("Inizio il parse Constant");
+  (*prerr_endline ("Inizio il parse Constant");*)
   let name = parseName ns el in
   name, 
   {constantType = parseType el ns aliases;

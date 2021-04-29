@@ -11,7 +11,7 @@ type callback = {
 
 
 let parseCallback ns aliases el =
-  prerr_endline ("Inizio il parse Callback");
+ (* prerr_endline ("Inizio il parse Callback");*)
   let name = parseName ns el in
   let callable = parseCallable ns aliases el in
   let ctype = queryCType el in

@@ -2,7 +2,7 @@ open BasicTypes
 open Parser
 open Type
 open Documentation
-open XMLUtils
+(*open XMLUtils*)
 
 type direction =
     | DirectionIn
@@ -42,11 +42,11 @@ module ArgMap = Map.Make(Arg)
 (* xml -> transfer *) 
 let parseTransfer el =
   (*TODO debugging*)
-  let str = match lookupAttr "name" el with
+  (*let str = match lookupAttr "name" el with
     | Some c -> c
     | None -> "NONE"
-  in
-  prerr_endline ("L'elemento è un: " ^ (Xml.tag el) ^ " con name = " ^ str);
+  in*)
+  (*prerr_endline ("L'elemento è un: " ^ (Xml.tag el) ^ " con name = " ^ str);*)
   match getAttr "transfer-ownership" el with
   | "none" -> TransferNothing
   | "container" -> TransferContainer
@@ -73,7 +73,7 @@ let parseDirection str =
 
 (* xml -> string -> arg *)
 let parseArg ns aliases el =
-  prerr_endline ("Inizio il parse Arg");
+  (*prerr_endline ("Inizio il parse Arg");*)
   let name = getAttr "name" el in
   let ownership = parseTransfer el in
   let scope = optionalAttr "scope" ScopeTypeInvalid el parseScope in
@@ -88,7 +88,7 @@ let parseArg ns aliases el =
   in let callerAllocates = optionalAttr "caller-allocates" false el parseBool in
   let t = parseType el ns aliases in
   let doc = parseDocumentation el in
-  prerr_endline "FINITO IL PARSE ARG";
+  (*prerr_endline "FINITO IL PARSE ARG";*)
   { argCName = name;
     argType = t;
     argDoc = doc;

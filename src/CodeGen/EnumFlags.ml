@@ -18,7 +18,7 @@ let hashVariant s =
 
 
 
-let genEnumOrFlags minfo n e enumOrFlag =
+let genEnumOrFlags cgstate minfo n e enumOrFlag =
   if (sizeof uint) != 4
   then raise (CGError (CGErrorNotImplemented ("Unsupported uint size: " ^ string_of_int (sizeof uint))));
   if e.enumStorageBytes != 4
@@ -51,35 +51,35 @@ let genEnumOrFlags minfo n e enumOrFlag =
   let minfo = line ("let " ^ ocamlTbl ^ " = get_" ^ enumName ^ "_table ()") minfo in 
   let minfo = 
   if enumOrFlag = Enum
-  then line ("let " ^ enumName ^ " = GObject.Data.enum " ^ ocamlTbl) minfo
-  else line ("let " ^ enumName ^ " = GObject.Data.flags " ^ ocamlTbl) minfo
+  then line ("let " ^ enumName ^ " = Gobject.Data.enum " ^ ocamlTbl) minfo
+  else line ("let " ^ enumName ^ " = Gobject.Data.flags " ^ ocamlTbl) minfo
   in let minfo = blank minfo in
   let minfo = addCDep minfo (n.namespace ^ "Enums")  in 
-  let minfo = cline ("const lookup_info " ^ mlTableName ^ "[] = {") minfo in
-  let minfo = cline ("  { 0, " ^ string_of_int(List.length e.enumMembers) ^ " },") minfo in 
-  let minfo = List.fold_left (
-    fun minfo (memberName, memberCId) -> cline ("  { MLTAG_" ^ memberName ^ ", " ^ memberCId ^ " },") minfo )
-    minfo namesAndIds in
-  let minfo = cline "};" minfo in 
-  let minfo = cline "" minfo in 
-  let minfo = cline ("CAMLprim value " ^ cGetterFn ^ " () {") minfo in
-  let minfo = cline ("  return (value) " ^ mlTableName ^ ";") minfo in 
-  let minfo = cline "}" minfo in 
-  let minfo =
+  let cgstate, minfo = cline ("const lookup_info " ^ mlTableName ^ "[] = {") minfo cgstate in
+  let cgstate, minfo = cline ("  { 0, " ^ string_of_int(List.length e.enumMembers) ^ " },") minfo cgstate in 
+  let cgstate, minfo = List.fold_left (
+    fun (cgstate, minfo) (memberName, memberCId) -> cline ("  { MLTAG_" ^ memberName ^ ", " ^ memberCId ^ " },") minfo cgstate)
+    (cgstate, minfo) namesAndIds in
+  let cgstate, minfo = cline "};" minfo cgstate in 
+  let cgstate, minfo = cline "" minfo cgstate in 
+  let cgstate, minfo = cline ("CAMLprim value " ^ cGetterFn ^ " () {") minfo cgstate in
+  let cgstate, minfo = cline ("  return (value) " ^ mlTableName ^ ";") minfo cgstate in 
+  let cgstate, minfo = cline "}" minfo cgstate in 
+  let cgstate, minfo =
     if (enumOrFlag = Flag)
     then 
-      let minfo = cline ("Make_Flags_val(" ^ enumVal n ^ ")") minfo in 
-      let minfo = cline ("Make_OptFlags_val(" ^ enumVal n ^ ")") minfo in 
+      let cgstate, minfo = cline ("Make_Flags_val(" ^ enumVal n ^ ")") minfo cgstate in 
+      let cgstate, minfo = cline ("Make_OptFlags_val(" ^ enumVal n ^ ")") minfo cgstate in 
       let minfo = hline ("CAMLprim int " ^ flagsVal n ^ " (value list);") minfo in 
-      hline ("CAMLprim int " ^ optFlagsVal n ^ " (value list);") minfo
+      cgstate, hline ("CAMLprim int " ^ optFlagsVal n ^ " (value list);") minfo
     else 
-      minfo
-  in cline "" minfo
+      cgstate, minfo
+  in cline "" minfo cgstate
  
 
 let genEnum cfg cgstate minfo n e =
-  let action = fun cfg cgstate minfo -> lazy (cfg, cgstate, genEnumOrFlags minfo n e Enum) in
-  let fallback = fun cfg cgstate minfo e -> lazy (cfg, cgstate, commentLine minfo ("Could not generate: " ^ describeCGError e)) in
+  let action = fun cgstate minfo -> lazy (genEnumOrFlags cgstate minfo n e Enum) in
+  let fallback = fun cgstate minfo e -> lazy (cfg, cgstate, commentLine minfo ("Could not generate: " ^ describeCGError e)) in
   handleCGExc (cfg, cgstate, minfo) fallback action
   (*try
     cfg, cgstate, genEnumOrFlags minfo n e Enum
@@ -87,8 +87,8 @@ let genEnum cfg cgstate minfo n e =
 
 
 let genFlags cfg cgstate minfo n (Flags enum) =
-  let action = fun cfg cgstate minfo -> lazy (cfg, cgstate, genEnumOrFlags minfo n enum Flag) in
-  let fallback = fun cfg cgstate minfo e -> lazy (cfg, cgstate, commentLine minfo ("Could not generate: " ^ describeCGError e)) in
+  let action = fun cgstate minfo -> lazy (genEnumOrFlags cgstate minfo n enum Flag) in
+  let fallback = fun cgstate minfo e -> lazy (cfg, cgstate, commentLine minfo ("Could not generate: " ^ describeCGError e)) in
   handleCGExc (cfg, cgstate, minfo) fallback action
  (* try
     cfg, cgstate, genEnumOrFlags minfo n enum Flag

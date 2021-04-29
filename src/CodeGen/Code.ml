@@ -177,7 +177,32 @@ let rec mergeInfoState oldState newState =
   let newDeps = StringSet.union (oldState.moduleDeps) (newState.moduleDeps) in
   let newCDeps = StringSet.union (oldState.cDeps) (newState.cDeps) in
   let union_f _ m1 m2 = Some (mergeInfo m1 m2) in
+  prerr_endline ("I submodules dello stato vecchio sono: ");
+  StringMap.iter (fun k v -> if 
+      StringMap.cardinal oldState.submodules < 5
+      then prerr_endline("Chiave: " ^ k ^ ". Valore: " ^ dotModulePath v.modulePath)) oldState.submodules;
+  prerr_endline ("I submodules dello stato nuovo sono: ");
+  StringMap.iter (fun k v -> if 
+      StringMap.cardinal oldState.submodules < 5 
+      then prerr_endline("Chiave: " ^ k ^ ". Valore: " ^ dotModulePath v.modulePath)) newState.submodules;
+ 
   let newSubmodules = StringMap.union union_f oldState.submodules newState.submodules in
+
+  prerr_endline ("I submodules dello stato aggiornato sono: " ^ string_of_int(StringMap.cardinal newSubmodules));
+  StringMap.iter (fun k v -> if (*dotModulePath v.modulePath = "GLib" || 
+  dotModulePath v.modulePath = "Constant" || 
+  dotModulePath v.modulePath = "GLib.Constant" ||
+  dotModulePath newState.modulePath = "GLib.Constant" ||*)
+  StringMap.cardinal newSubmodules < 6
+  then prerr_endline ("Chiave: " ^ k ^ ". Valore :" ^ dotModulePath v.modulePath)) newSubmodules;
+  prerr_endline ("I submodules dei submodules stato aggiornato sono: " ^ string_of_int(StringMap.cardinal newSubmodules));
+  StringMap.iter (fun k v -> if (*dotModulePath v.modulePath = "GLib" || 
+  dotModulePath v.modulePath = "Constant" || 
+  dotModulePath v.modulePath = "GLib.Constant" ||
+  dotModulePath newState.modulePath = "GLib.Constant" ||*)
+  StringMap.cardinal newSubmodules < 6
+  then prerr_endline ("Chiave: " ^ k ^ ". Valore :" ^ dotModulePath v.modulePath)) newSubmodules;
+
   let newExports = oldState.moduleExports @ newState.moduleExports in
   let newImports = ModulePathSet.union oldState.qualifiedImports newState.qualifiedImports in
   let newCCode = Code ((getCode oldState.cCode) @ (getCode newState.cCode)) in
@@ -199,6 +224,7 @@ let rec mergeInfoState oldState newState =
   }
 
 and mergeInfo oldInfo newInfo =
+  prerr_endline ("Sto mergiando il modulo vecchio: " ^ dotModulePath oldInfo.modulePath ^ " con il nuovo: " ^ dotModulePath newInfo.modulePath);
   let info = mergeInfoState oldInfo newInfo in
   { info with moduleCode = Code (getCode (oldInfo.moduleCode) @ getCode (newInfo.moduleCode))}
 
@@ -223,9 +249,9 @@ let genCode cfg apis mPath action =
 let handleCGExc (cfg, cgstate, oldInfo) fallback action =
   let info = cleanInfo oldInfo in
   try
-    let (cfg, cgstate, newInfo) = Lazy.force (action cfg cgstate info) in
+    let (cgstate, newInfo) = Lazy.force (action cgstate info) in
     cfg, cgstate, mergeInfo oldInfo newInfo
-  with CGError e -> Lazy.force (fallback cfg cgstate oldInfo e)
+  with CGError e -> Lazy.force (fallback cgstate oldInfo e)
 
 
 let describeCGError error =
@@ -239,15 +265,23 @@ let currentNS minfo =
   modulePathNS minfo.modulePath
 
 
-let addSubmodule minfo mName smInfo =
-  match StringMap.mem mName minfo.submodules with
-  | true -> {minfo with submodules = StringMap.add mName (mergeInfo smInfo minfo) minfo.submodules} 
-  | false -> {minfo with submodules = StringMap.add mName smInfo minfo.submodules}
+let addSubmodule currentInfo mName smInfo =
+  match StringMap.mem mName currentInfo.submodules with
+  | true -> prerr_endline ("Mergio il submodule \"" ^ mName ^ "\" al modulo \"" ^ dotModulePath currentInfo.modulePath);
+  prerr_endline ("Il submodule ha come path: " ^ dotModulePath smInfo.modulePath); 
+  prerr_endline ("Quindi sto mergianod il modulo vecchio: " ^ dotModulePath currentInfo.modulePath ^ " con il modulo nuovo " ^ dotModulePath smInfo.modulePath);
+  let currentInfoModule = StringMap.find mName currentInfo.submodules in
+            {currentInfo with submodules = StringMap.add mName (mergeInfo smInfo currentInfoModule) currentInfo.submodules} 
+  | false -> 
+  prerr_endline ("Aggiungo il submodule \"" ^ mName ^ "\" al modulo \"" ^ dotModulePath currentInfo.modulePath); 
+  prerr_endline ("Il submodule ha come path: " ^ dotModulePath smInfo.modulePath);
+  {currentInfo with submodules = StringMap.add mName smInfo currentInfo.submodules}
 
 
 let submodule' (cfg, cgstate, minfo) mName action =
   let oldInfo = minfo in
-  let info = emptyModule ({modulePathToList = oldInfo.modulePath.modulePathToList @ [mName]}) in
+  let info = emptyModule (concatModulePath oldInfo.modulePath mName) in
+  prerr_endline ("VEDIAMO SE IL BACO È QUI: " ^ dotModulePath info.modulePath);
   let _, _, smInfo = action (cfg, emptyCGState, info) in
   cfg, cgstate, (addSubmodule oldInfo mName smInfo)
 
@@ -257,6 +291,7 @@ let rec submodule (cfg, cgstate, minfo) mPath action =
   match mPath.modulePathToList with
   | [] -> action (cfg, cgstate, minfo)
   | m::ms -> 
+    prerr_endline ("____________SUBMODULE________" ^ dotModulePath mPath ^ " e " ^ String.concat " " ms);
     submodule' (cfg, cgstate, minfo) m (fun (cfg, cgstate, minfo) -> submodule (cfg, cgstate, minfo) {modulePathToList = ms} action)
   
   
@@ -302,6 +337,14 @@ let getAPI cfg t =
   | None -> assert false 
 
 
+
+let recurseWithState f oldInfo =
+  let info = cleanInfo oldInfo in
+  let cgstate, newInfo = f info in
+  let code = newInfo.moduleCode in
+  let minfo = mergeInfoState oldInfo newInfo in
+  cgstate, minfo, code
+
 (* module_info -> code_token -> module_info *)
 let tellCode c minfo =
   { minfo with moduleCode = Code (getCode(minfo.moduleCode) @ [c])}
@@ -320,12 +363,21 @@ let gline s minfo =
   tellGCode (Line s) minfo 
 
 
-let cline l minfo =
+let cBoot f minfo =
+  let cgstate, minfo, code = recurseWithState f minfo in
+  cgstate, { minfo with cCode = Code ((getCode(minfo.cCode)) @ getCode(code))}
+
+
+let cline l minfo cgstate = cBoot (fun minfo -> cgstate, line l minfo) minfo
+
+
+
+(*let cline l minfo =
   let info = cleanInfo minfo in
   let info = line l info in
   let code = info.moduleCode in
   let minfo = mergeInfoState minfo info in
-  { minfo with cCode = Code ((getCode(minfo.cCode)) @ getCode(code))}
+  { minfo with cCode = Code ((getCode(minfo.cCode)) @ getCode(code))}*)
 
 
 (* module_info -> code_token -> module_info *)
@@ -364,13 +416,6 @@ let recurseWithAPIs (cfg, cgstate, minfo) f apis =
   cfg, cgstate, newInfo 
 
 
-let recurseWithState f minfo =
-  let oldInfo = minfo in
-  let info = cleanInfo oldInfo in
-  let cgstate, info = f info in
-  let code = info.moduleCode in
-  let minfo = mergeInfoState minfo info in
-  cgstate, minfo, code
 
 
 let indent f minfo =
@@ -568,8 +613,8 @@ let addCFile state file = file::state
 let writeModuleInfo state isVerbose dirPrefix _dependencies minfo =
   let mapElems = List.map (fun (_, v) -> v) (StringMap.bindings minfo.submodules) in
   let _submodulePaths = List.map (fun v -> v.modulePath) mapElems in
-  prerr_endline ("Il module_info che sto per scrivere ha module path: " ^ String.concat "" minfo.modulePath.modulePathToList);
-  let _ = List.iter (fun x -> prerr_endline ("subModulePath: " ^ String.concat " " x.modulePathToList))_submodulePaths in
+  prerr_endline ("Il module_info che sto per scrivere ha module path: " ^ dotModulePath minfo.modulePath);
+  (*let _ = List.iter (fun x -> prerr_endline ("subModulePath: " ^ String.concat " " x.modulePathToList))_submodulePaths in*)
   let _submoduleExports = List.map dotWithPrefix _submodulePaths in
   (*let _pkgRoot = _ in*)
   let nspace = getLibName dirPrefix in
@@ -612,11 +657,12 @@ let writeModuleInfo state isVerbose dirPrefix _dependencies minfo =
   let _ = writeFile hStubsFile (String.concat "\n" [cImports nspace; commonCImports; genHStubs minfo]) in
   prerr_endline ("Fine codeToText hStubs");
 
-  let _ = 
+  let state = 
   match isCodeEmpty minfo.cCode with
   | true -> state
   | false ->
     let cStubsFile = modulePathToFilePath dirPrefix minfo.modulePath ".c" in
+    prerr_endline ("CSTUBS FILE: " ^ cStubsFile);
     let deps' = List.filter (fun x -> x != "Widget") (minfo.cDeps |> StringSet.to_seq |> List.of_seq) in
     let deps = String.concat "\n" (List.map (fun d -> "#include \"GI" ^ d ^ ".h\"") deps') in
     let state = addCFile state cStubsFile in
@@ -634,29 +680,44 @@ let writeModuleInfo state isVerbose dirPrefix _dependencies minfo =
   in state
 
 
+let firstAndSecondsafe l =
+  match l with
+  | [] -> []
+  | x::[] -> [x]
+  | x::xs -> [x; List.nth xs 1]
+
 let hdsafe l =
   match l with
   | [] -> []
   | x -> [List.hd x]
 
 let rec writeModuleTree' state verbose_ dirPrefix dependencies minfo =
-  prerr_endline ("Entro nella writeModuleTree");
-  prerr_endline ("Sono nella moduleTree e sto lavorando sul modulo: " ^ String.concat "" minfo.modulePath.modulePathToList);
-  prerr_endline ("state: " ^ String.concat "" state);
+  prerr_endline ("_____________Entro nella moduleTree e sto lavorando sul modulo padre: " ^ String.concat "" minfo.modulePath.modulePathToList);
+  (*prerr_endline ("state: " ^ String.concat "" state);*)
+  StringMap.iter (fun k v -> prerr_endline ("Chiave: " ^ k ^ ". Valore :" ^ dotModulePath v.modulePath)) minfo.submodules;
   let mapElems = List.map (fun (_, v) -> v) (StringMap.bindings minfo.submodules) in
-  prerr_endline ("La lista di elementi è lunga: " ^ string_of_int (List.length mapElems));
+  (*prerr_endline ("La lista di figli pre filtro è lunga: " ^ string_of_int (List.length mapElems));
+  let submodulesName = List.map (fun x -> dotModulePath x.modulePath) mapElems in
+  prerr_endline ("Ed è composta da: \n" ^ String. concat "\n" submodulesName);
+  
+  let mapElems = List.filteri (fun i _ -> i < 6) (List.map (fun (_, v) -> v) (StringMap.bindings minfo.submodules)) in
+  prerr_endline ("La lista di figli è lunga: " ^ string_of_int (List.length mapElems));
+  let submodulesName = List.map (fun x -> dotModulePath x.modulePath) mapElems in
+  prerr_endline ("Ed è composta da: \n" ^ String. concat "\n" submodulesName);*)
   let state, subModulePaths = 
     List.fold_left (fun (state, l) minfo -> 
-      prerr_endline ("fold");
+      prerr_endline ("DENTRO LA FOLD");
+      prerr_endline ("APPLICATA AL MODULO: " ^ (dotModulePath minfo.modulePath));
       let t = writeModuleTree' state verbose_ dirPrefix dependencies minfo
       in fst t, l @ (snd t)) 
-      (state,[]) (hdsafe mapElems)
+      (state,[]) mapElems
   in
+  prerr_endline ("ESCO DALLA FOLD");
   prerr_endline ("state: " ^ String.concat "" state);
   prerr_endline ("subModulePaths: " ^ String.concat " " subModulePaths);
-  prerr_endline ("ESCO DALLA FOLDDD");
   let state = writeModuleInfo state verbose_ dirPrefix dependencies minfo in
-  state, dotWithPrefix minfo.modulePath::subModulePaths
+  (*prerr_endline ("Resituisco: " ^ String.concat " " (dotWithPrefix minfo.modulePath::subModulePaths));*)
+  state, (dotWithPrefix minfo.modulePath) :: subModulePaths
 
 
 let genDuneFile libName outputDir cFiles deps =
@@ -674,7 +735,11 @@ let genDuneFile libName outputDir cFiles deps =
       " (public_name GI" ^ libName ^ ")";
       " (libraries gilablgtk3 " ^ String.concat " " libs ^ ")";
       ]
-  in let fileContent = 
+  
+
+  in 
+  prerr_endline ("CFILESSSSSS DENTRO A GENDUNE È: " ^ String.concat " " cFiles);
+  let fileContent = 
     match cFiles with
     | [] -> String.concat "\n" (commonPart @ [")"])
     | _ ->
@@ -682,8 +747,8 @@ let genDuneFile libName outputDir cFiles deps =
         [ "(rule";
           " (targets";
           "  cflag-" ^ pkgConfName ^ ".sexp";
-          "  clink-" ^ pkgConfName ^ ".sexp";
-          " (action (run dune_config -pkg " ^ pkgConfName ^ " -version 3.18";
+          "  clink-" ^ pkgConfName ^ ".sexp)";
+          " (action (run dune_config -pkg " ^ pkgConfName ^ " -version 3.18)))";
           ] @
         commonPart @
         [ " (flags :standard -w -6-7-9-10-27-32-33-34-35-36-50-52 -no-strict-sequence)";
@@ -700,24 +765,36 @@ let genDuneFile libName outputDir cFiles deps =
   in writeFile duneFilePath fileContent
 
 let writeModuleTree verbose_ dirPrefix minfo dependencies =
-  let modules, cFiles =
+  let cFiles, modules =
     writeModuleTree' [] verbose_ dirPrefix dependencies minfo in
+  prerr_endline ("FINITA LA WRITE MODULE TREE_________________________________________");
+  prerr_endline ("I cFiles sono: " ^ String.concat "" cFiles);
   let prefix' = Option.value dirPrefix ~default:"" in
+  prerr_endline ("prefix': " ^ prefix');
   let libName = getLibName dirPrefix in
-  let modules' = List.filter (fun m -> List.length (String.split_on_char '.' m) > 2) modules in
-  let regexp = Str.regexp "." in
+  let modules' = List.filter (fun m -> 
+  List.length (String.split_on_char '.' m) <3 ) modules in
+  prerr_endline ("Modules' è lungo: " ^ string_of_int(List.length modules'));
+  prerr_endline (String.concat " " modules');
+  let regexp = Str.regexp "[.]" in
+  prerr_endline ("DIRNAME: " ^ Filename.dirname "GLib/AsyncQueue");
+  prerr_endline ("REPLACED: " ^ (Str.global_replace regexp "/"  "GLib.AsyncQueue"));
   let modulePaths = List.map (
       fun x -> (Str.global_replace regexp "/" x) |> Filename.dirname |> fun y -> prefix' ^ dir_sep ^ y)
       modules' |> List.to_seq |> StringSet.of_seq
-  in let dirFileTuple = List.map (fun cFile -> (Filename.dirname cFile, Filename.basename cFile)) cFiles in
+  in let dirFileTuple = List.map (fun cFile -> (Filename.dirname cFile, Filename.basename cFile |> Filename.remove_extension)) cFiles in
   let cFilesMap = List.fold_left (fun fMap (key, file) -> 
     let el = StringMap.find_opt key fMap in
     match el with
     | None -> StringMap.add key [file] fMap
     | Some el -> StringMap.add key (file::el) fMap) 
     StringMap.empty dirFileTuple
-  in let _ =  StringSet.iter (
+  in 
+  StringMap.iter (fun k v -> prerr_endline("Chiave: " ^ k ^ ". Valore: " ^ String.concat " " v)) cFilesMap;
+  StringSet.iter (fun el -> prerr_endline("Valore modulePaths: " ^ el)) modulePaths;
+  let _ =  StringSet.iter (
     fun path ->
+      prerr_endline ("Path: " ^ path);
       let _ = Sys.command ("mkdir -p " ^ path) in
       let cFileNames = Option.value (StringMap.find_opt path cFilesMap) ~default:[] in
       genDuneFile libName path cFileNames dependencies 

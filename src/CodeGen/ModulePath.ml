@@ -29,9 +29,12 @@ let dotModulePath p =
     | {modulePathToList = mpl;} -> String.concat "." mpl
 
 
-let (/.) mp p =
+let concatModulePath mp p =
+    {modulePathToList = mp.modulePathToList @ (toModulePath p).modulePathToList}
+
+(*let (/.) mp p =
     match mp with
-    | {modulePathToList = mpl;} -> {modulePathToList = mpl @ [p]}
+    | {modulePathToList = mpl;} -> {modulePathToList = mpl @ [p]}*)
 
 (*TODO non ho capito come si usi il (<>) in haskell*)
 (*let addNamePrefix prefix mp =

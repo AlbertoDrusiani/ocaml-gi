@@ -61,7 +61,7 @@ let parseEnum ns el =
     enumDocumentation = doc;
     enumTypeInit = typeInit;
     enumCType = ctype;
-    enumStorageBytes = 0; (*TODO mi da errore extractEnumStorageBytes (List.map (fun x -> x.enumMemberValue) members);*)
+    enumStorageBytes = 4; (*TODO mi da errore extractEnumStorageBytes (List.map (fun x -> x.enumMemberValue) members);*)
     enumDeprecated = deprecated;
   }
 

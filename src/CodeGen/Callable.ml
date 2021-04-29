@@ -173,7 +173,7 @@ let genOCamlExternal cfg cgstate minfo mn cSymbol callable =
 
 
 
-let genMlMacro cfg minfo mn cSymbol callable =
+let genMlMacro cfg cgstate minfo mn cSymbol callable =
   let inArgs = callableHInArgs' callable in
   let nArgs = List.length callable.args in
   let outArgs = callableHOutArgs callable in
@@ -201,7 +201,7 @@ let genMlMacro cfg minfo mn cSymbol callable =
       in cline
        (macroName ^ (String.lowercase_ascii mn.namespace) ^ ", " ^ cSymbol ^
         ", " ^ (String.concat ", " inArgTypes) ^ ", " ^ (String.concat ", " outArgTypes) ^
-        ", " ^ retTypeName ^ ")") minfo
+        ", " ^ retTypeName ^ ")") minfo cgstate
     else
       let macroName = "ML_" ^ string_of_int nArgs ^ " (" in
       let minfo, retTypeName = cToOCamlValue cfg minfo callable.returnMayBeNull callable.returnType in
@@ -210,7 +210,7 @@ let genMlMacro cfg minfo mn cSymbol callable =
         fst u, (snd u) :: l) (minfo,[]) (List.init (List.length inArgs) (fun x -> x+1)) callable.args in
       let macroArgs =
         String.concat ", " ([String.lowercase_ascii mn.namespace; cSymbol] @ argTypes @ [retTypeName])
-      in cline (macroName ^ macroArgs ^ ")") minfo
+      in cline (macroName ^ macroArgs ^ ")") minfo cgstate
  
     
 
@@ -219,4 +219,4 @@ let genCCallableWrapper cfg cgstate minfo mn cSymbol callable =
   let callable' = fixupCallerAllocates callable in
   let cgstate, minfo = genOCamlExternal cfg cgstate minfo mn cSymbol callable' in
   let minfo = blank minfo in
-  cgstate, genMlMacro cfg minfo mn cSymbol callable'
+  genMlMacro cfg cgstate minfo mn cSymbol callable'

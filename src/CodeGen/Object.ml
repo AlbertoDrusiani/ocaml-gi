@@ -31,7 +31,7 @@ let genGObjectCasts (cfg, cgstate, minfo) n ctype checkMacro =
         else
          hline ("#define " ^ objectVal n ^ "(val) check_cast(" ^ checkMacro ^ ", val)") minfo 
     in let minfo = hline ("#define " ^ valObject n ^ " Val_GAnyObject") minfo  in 
-    let minfo = cline ("Make_Val_option(" ^ ctype ^ "," ^ valObject n ^ ")")  minfo in 
+    let cgstate, minfo = cline ("Make_Val_option(" ^ ctype ^ "," ^ valObject n ^ ")")  minfo cgstate in 
     let minfo = hline ("value " ^ valOptObject n ^ " (" ^ ctype ^ "*);") minfo  in 
     cfg, cgstate, minfo
   
@@ -83,12 +83,12 @@ let cTypeInit cTypeName typeInit =
   ]
 
 
-let genCObjectTypeInit minfo o n =
+let genCObjectTypeInit cgstate minfo o n =
   match o with
   | obj when obj.objTypeInit != "" -> 
-      let minfo = cline (cTypeInit (camelCaseToSnakeCase n.namespace ^ n.name) obj.objTypeInit) minfo  in
-      minfo
-  | _ -> minfo
+      let cgstate, minfo = cline (cTypeInit (camelCaseToSnakeCase n.namespace ^ n.name) obj.objTypeInit) minfo cgstate  in
+      cgstate, minfo
+  | _ -> cgstate, minfo
 
 
 let genMlTypeInit minfo nm =
@@ -213,7 +213,7 @@ let genObject' (cfg, cgstate, minfo) n o ocamlName =
   (*let name' = upperName n in *)
   let nspace = n.namespace in
   let objectName = n.name in
-  let minfo = genCObjectTypeInit minfo o n in
+  let cgstate, minfo = genCObjectTypeInit cgstate minfo o n in
   let minfo = genSignalClass (cfg, minfo) n o in
   let minfo = gline ("class " ^ ocamlName ^ "_skel obj = object (self)") minfo in
   let minfo = 
@@ -320,11 +320,11 @@ let getIfCheckMacro i =
   | Some t -> Some (breakOnFirst "_get_type" t |> String.uppercase_ascii)
 
 
-let genCInterfaceTypeInit minfo i n =
+let genCInterfaceTypeInit cgstate minfo i n =
   match i with
   | iface when Option.is_some iface.ifTypeInit -> 
-    cline (cTypeInit (camelCaseToSnakeCase (n.namespace ^ n.name)) (Option.get iface.ifTypeInit)) minfo
-  | _ -> minfo 
+    cline (cTypeInit (camelCaseToSnakeCase (n.namespace ^ n.name)) (Option.get iface.ifTypeInit)) minfo cgstate
+  | _ -> cgstate, minfo 
 
 (*let genInterface cfg cgstate minfo n iface = 
   let name' = upperName n in

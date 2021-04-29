@@ -19,10 +19,10 @@ let submoduleLocation n api =
   | _, APICallback _ -> {modulePathToList = ["Callbacks"]}
   | _, APIEnum _ -> {modulePathToList = ["Enums"]}
   | _, APIFlags _ -> {modulePathToList = ["Enums"]}
-  | n, APIInterface _ -> {modulePathToList = [(upperName n)]}
-  | n, APIObject _ -> {modulePathToList = [(upperName n)]}
-  | n, APIStruct _ -> {modulePathToList = [(upperName n)]}
-  | n, APIUnion _ -> {modulePathToList = [(upperName n)]}
+  | n, APIInterface _ -> toModulePath (upperName n)
+  | n, APIObject _ -> toModulePath (upperName n)
+  | n, APIStruct _ -> toModulePath (upperName n)
+  | n, APIUnion _ -> toModulePath (upperName n)
 
 
 let nsOCamlClass minfo nm =

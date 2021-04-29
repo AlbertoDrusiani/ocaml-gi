@@ -34,7 +34,6 @@ let genStructCasts minfo n s =
   | Some "GdkAtom" -> hline ("#define " ^ (structVal n) ^ "(val) ((GdkAtom) MLPointer_val(val))") minfo
       (*commento per ricordarmi dov'è AsyncQueue DEBUG*)
   | Some cType -> 
-  prerr_endline ("CULOOOO" ^ String.concat " " minfo.modulePath.modulePathToList);
   hline ("#define " ^ (structVal n) ^ "(val) ((" ^ cType ^ "*) MLPointer_val(val))") minfo
   | None -> minfo
 
