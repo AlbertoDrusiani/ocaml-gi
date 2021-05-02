@@ -11,6 +11,7 @@ open TypeRep
 
 (* config -> module_info -> int -> arg -> module_info*string*)
 let foreignArgConverter cfg minfo i a =
+  (*try*)
   let optionVal argNum justConv nothingVal =
     let argNumStr = string_of_int argNum in
     let args = String.concat ", " [argNumStr; justConv; nothingVal] in
@@ -21,7 +22,7 @@ let foreignArgConverter cfg minfo i a =
   then minfo, optionVal i conv "NULL"
   else minfo, conv
 
-
+(*with CGError (CGErrorNotImplemented e) ->prerr_endline(e); minfo, ""*)
 
 
 
@@ -88,6 +89,7 @@ let arrayLenghtsMap callable =
   in go callable.args []
 
 let fixupCallerAllocates c =
+
   let fixupDir a =
     match a.argType with
     | TCArray (_, _, l, _) ->
@@ -127,6 +129,7 @@ let callableOCamlTypes cfg cgstate minfo c =
     match c.returnType with
     | None -> cgstate, TextCon "unit"
     | Some t -> outParamOcamlType cfg cgstate minfo t
+  
   in let optionalRetType =
     if c.returnMayBeNull then OptionCon retType else retType
   in let outArgs' =
@@ -134,15 +137,17 @@ let callableOCamlTypes cfg cgstate minfo c =
     | [], _ -> optionalRetType
     | _, None -> TupleCon outArgs
     | _, _ -> TupleCon (optionalRetType::outArgs)
-  in cgstate, inArgs @ [outArgs']
+  in 
+  cgstate, inArgs @ [outArgs']
 
 
 
 let canGenerateCallable cfg cgstate minfo cb =
-  (*TODO forse try catch*)
-  let cgstate, _ = callableOCamlTypes cfg cgstate minfo cb in
-  let minfo = List.fold_left (fun info x -> fst (foreignArgConverter cfg info 0 x)) minfo cb.args in
-  cgstate, minfo, cb.callableThrows
+  try 
+    let cgstate, _ = callableOCamlTypes cfg cgstate minfo cb in
+    let minfo = List.fold_left (fun info x -> fst (foreignArgConverter cfg info 0 x)) minfo cb.args in
+    cgstate, minfo, not cb.callableThrows
+  with CGError (CGErrorNotImplemented _e) -> cgstate, minfo, false
   
 
 
@@ -158,7 +163,7 @@ let genOCamlExternal cfg cgstate minfo mn cSymbol callable =
     indent (fun minfo ->
       let cgstate, argTypes = callableOCamlTypes cfg cgstate minfo callable in
       let argTypesStr = List.map (typeShow currNS) argTypes in
-      let inArgs = List.rev argTypesStr |> List.tl in
+      let inArgs = List.rev argTypesStr |> List.tl |> List.rev in
       let outArg = List.rev argTypesStr |> List.hd in
       let minfo = 
         List.fold_left (fun info x -> line (x ^ " -> ") info) minfo inArgs in
@@ -189,7 +194,8 @@ let genMlMacro cfg cgstate minfo mn cSymbol callable =
         List.fold_left_map (fun minfo outArg -> 
             cToOCamlValue cfg minfo outArg.mayBeNull (Some outArg.argType)) minfo outArgs
       (*sta roba dovrebbe funzionare come una fold_map_2, con due accumulatori perché ritorno una coppia *)
-      in let minfo, inArgTypes = List.fold_left2 (fun (minfo, l) idx arg -> 
+      in 
+      let minfo, inArgTypes = List.fold_left2 (fun (minfo, l) idx arg -> 
         let u = foreignArgConverter cfg minfo idx arg in
         fst u, (snd u) :: l) (minfo,[]) (List.init (List.length inArgs) (fun x -> x+1)) inArgs in
       let minfo, retTypeName = cToOCamlValue cfg minfo callable.returnMayBeNull callable.returnType in
@@ -203,13 +209,14 @@ let genMlMacro cfg cgstate minfo mn cSymbol callable =
         ", " ^ (String.concat ", " inArgTypes) ^ ", " ^ (String.concat ", " outArgTypes) ^
         ", " ^ retTypeName ^ ")") minfo cgstate
     else
+    
       let macroName = "ML_" ^ string_of_int nArgs ^ " (" in
       let minfo, retTypeName = cToOCamlValue cfg minfo callable.returnMayBeNull callable.returnType in
       let minfo, argTypes = List.fold_left2 (fun (minfo, l) idx arg -> 
         let u = foreignArgConverter cfg minfo idx arg in
         fst u, (snd u) :: l) (minfo,[]) (List.init (List.length inArgs) (fun x -> x+1)) callable.args in
       let macroArgs =
-        String.concat ", " ([String.lowercase_ascii mn.namespace; cSymbol] @ argTypes @ [retTypeName])
+        String.concat ", " ([String.lowercase_ascii mn.namespace; cSymbol] @ List.rev argTypes @ [retTypeName])
       in cline (macroName ^ macroArgs ^ ")") minfo cgstate
  
     

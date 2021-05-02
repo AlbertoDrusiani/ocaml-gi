@@ -12,7 +12,6 @@ open Struct
 open Fixups
 open ModulePath
 
-(*let genFunction n f =*)
 
 let genUnionCasts minfo n u =
   let mbCType = u.unionCType in
@@ -20,7 +19,6 @@ let genUnionCasts minfo n u =
   | Some cType -> 
   hline ("#define" ^ (structVal n) ^ "(val) ((" ^ cType ^ "*) MLPointer_val(val))") minfo
   | None -> minfo
-  (*TODO da sistemare asterisco da escapare e da capire come restituire unit*)
 
 
 let genUnion cfg minfo n u =
@@ -52,13 +50,21 @@ let genAPI (cfg, cgstate, minfo) n api =
   match api with
   | APIConst _ -> cfg, cgstate, minfo
   | APIFunction _ -> cfg, cgstate, minfo
-  | APIEnum e -> genEnum cfg cgstate minfo n e
-  | APIFlags f -> genFlags cfg cgstate minfo n f
+  | APIEnum e -> 
+    let cgstate, minfo = genEnum cgstate minfo n e
+    in cfg, cgstate, minfo
+  | APIFlags f -> 
+    let cgstate, minfo = genFlags cgstate minfo n f
+    in cfg, cgstate, minfo
   | APICallback _ -> cfg, cgstate, minfo
   | APIStruct s -> cfg, cgstate, genStruct cfg minfo n s
   | APIUnion u -> cfg, cgstate, genUnion cfg minfo n u
-  | APIObject o -> genObject cfg cgstate minfo n o
-  | APIInterface _(*i*) -> cfg, cgstate, minfo (*TODO genInterface cfg cgstate minfo n i*)
+  | APIObject o -> 
+    let cgstate, minfo = genObject cfg cgstate minfo n o
+    in cfg, cgstate, minfo
+  | APIInterface i -> 
+    let cgstate, minfo = genInterface cfg cgstate minfo n i
+    in cfg, cgstate, minfo
 
 (* code_gen_config*cgstate*module_info -> name -> api -> code_gen_config*cgstate*module_info  *)
 let genAPIModule (cfg, cgstate, minfo) n api =

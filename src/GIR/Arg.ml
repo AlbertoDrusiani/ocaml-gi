@@ -82,7 +82,7 @@ let parseArg ns aliases el =
   let destroy = optionalAttr "destroy" (-1) el parseIntegral in
   let nullable = optionalAttr "nullable" false el parseBool in
   let allowNone = optionalAttr "allow-none" false el parseBool in
-  let mayBeNull = if d == DirectionIn
+  let mayBeNull = if d = DirectionIn
                   then nullable || allowNone
                   else nullable
   in let callerAllocates = optionalAttr "caller-allocates" false el parseBool in

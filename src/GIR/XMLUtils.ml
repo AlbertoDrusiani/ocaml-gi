@@ -141,7 +141,7 @@ let childElemsWithLocalName n el =
 (* GIRXMLNamespace -> string -> xml -> xml list *)
 let childElemsWithNSName ns n el =
     let name = {nameLocalName = n; nameNamespace = Some (girNamespace ns); namePrefix = None;} in
-    let nameMatch e = element_to_name e |> (fun x -> x == name) in
+    let nameMatch e = element_to_name e |> (fun x -> x = name) in
     List.filter nameMatch (subelements el)
 
 (* restituisce il primo figlio di un elemento con il nome locale specficato *)

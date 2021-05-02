@@ -74,7 +74,8 @@ let gtkSourceLib = {
 
 
 let main =
-  genBindings true glibLib;;
+  (*let _ = raise (Failure ("prova")) in*)
+  genBindings true gobjectLib;;
 
 
 main

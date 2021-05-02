@@ -12,7 +12,7 @@ type expose_closures =
 
 
 let conversionError converter case =
-  raise (CGError (CGErrorNotImplemented ("This " ^ converter ^ " (" ^ case ^ ") isn't implemented yet")))
+  prerr_endline ("conversion error");raise (CGError (CGErrorNotImplemented ("This " ^ converter ^ " (" ^ case ^ ") isn't implemented yet")))
 
 
 let ocamlDataConvErr err =
@@ -124,11 +124,11 @@ let ocamlValueToC cfg minfo tp =
     | TInt8 -> minfo, ocamlValueToCErr "TInt8"
     | TUInt8 -> minfo, ocamlValueToCErr "TUInt8"
     | TInt16 -> minfo, ocamlValueToCErr "TInt16"
-    | TUInt16 -> minfo, ocamlValueToCErr "TUInt16"
+    | TUInt16 ->minfo, ocamlValueToCErr "TUInt16"
     | TInt32 -> minfo, ocamlValueToCErr "TInt32"
-    | TUInt32 -> minfo, ocamlValueToCErr "TUInt32"
+    | TUInt32 ->minfo, ocamlValueToCErr "TUInt32"
     | TInt64 -> minfo, ocamlValueToCErr "TInt64"
-    | TUInt64 -> minfo, ocamlValueToCErr "TUInt64"
+    | TUInt64 ->minfo, ocamlValueToCErr "TUInt64"
     | TFloat -> minfo, "Float_val"
     | TDouble -> minfo, "Double_val"
     | TUniChar -> minfo, "Char_val"
@@ -270,7 +270,7 @@ let rec ocamlType cfg cgstate minfo t =
     | APICallback _ -> cgstate, TextCon "callback"
     | APIUnion _ -> cgstate, TextCon "union"
     end
-  | TGValue -> assert false (*FIXME nel codice haskell non c'è, com'è possibile?*)
+  | TGValue -> ocamlValueToCErr "TGValue" (*FIXME nel codice haskell non c'è, com'è possibile?*)
 
 
 let outParamOcamlType cfg cgstate minfo t =
@@ -292,15 +292,20 @@ let outParamOcamlType cfg cgstate minfo t =
   | TInterface n ->
 
     let handleEnum ocamlName =
+
       let enumRes = enumResolver minfo n in
       TextCon (enumRes ^ "." ^ ocamlName)
 
     in let handleObj n =
+
       let cgstate, freshVar = getFreshTypeVariable cgstate in
+
       cgstate, (ObjCon (TypeVarCon (freshVar, (RowCon (Less, (PolyCon (NameCon n)))))))
     in let ocamlName = ocamlIdentifier n in
+
     (*let tname = lowerName n in*)
     let api = getAPI cfg t in
+
     begin
     match api with
     | APIFlags _ -> cgstate, handleEnum ocamlName

@@ -20,7 +20,6 @@ type union = {
 }
 
 let parseUnion ns aliases el =
-  prerr_endline ("Inizio il parseUnion");
   let name = parseName ns el in
   let deprecated = parseDeprecation el in
   let doc = parseDocumentation el in

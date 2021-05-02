@@ -24,7 +24,6 @@ type struct_ml = {
 
 
 let parseStruct ns aliases el =
-  prerr_endline ("___Inizio il parse Struct___");
   let name = parseName ns el in
   let deprecated = parseDeprecation el in
   let doc = parseDocumentation el in

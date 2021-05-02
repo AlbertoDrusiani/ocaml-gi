@@ -218,7 +218,8 @@ let genMethod cfg cgstate minfo cn m  =
     | APIInterface _ -> ocamlClass ^ "_skel"
     | _ -> assert false
 
-  in let boundMethod mName (headArg, inArgs, outArg) =
+  in 
+  let boundMethod mName (headArg, inArgs, outArg) =
     let mapInArg _ p =
       match p with
       | ClassType (false, tvar, n) -> tvar ^ "#as_" ^ ocamlIdentifier n
@@ -233,7 +234,8 @@ let genMethod cfg cgstate minfo cn m  =
       (*FIXME non mi convince quella fmap, riga 321 haskell*)
     in cn.name ^ "." ^ mName ^ obj ^ String.concat " " (List.map (mapInArg outArg) inArgs)
 
-  in let methodSignature argVars (_, inArgs, outArg) =
+  in 
+  let methodSignature argVars (_, inArgs, outArg) =
     let inArgsShow = List.map (showMethodInArg minfo) inArgs in
     let outShow = showMethodOutArg cfg minfo outArg in
     let argShow = inArgsShow @ [outShow] in
@@ -256,7 +258,8 @@ let genMethod cfg cgstate minfo cn m  =
     | mArgs -> boundMethod mName mArgs
 
 
-  in match m.methodType with
+  in 
+  match m.methodType with
   | Constructor ->
     if m.methodName.name != "new"
     then
@@ -286,8 +289,9 @@ let genMethod cfg cgstate minfo cn m  =
         let tVarsText = 
           match tVars with
           | [] -> ""
-          (*FIXME da capire la concatenazione se è corretta, riga 265 haskell*)
-          | vars -> String.concat " " (("'"::vars) @ ["."])
+          | vars -> 
+            let l = List.map (fun x -> "'" ^ x) vars in
+            (String.concat " " l) ^ "."
         in let mSig = methodSignature tVarsText mArgs in
         let mBody = methodBody tVars mName mArgs in
         let minfo = gline ("  method " ^ mDeclName ^ mSig ^ " = ") minfo in

@@ -33,16 +33,19 @@ let genLibraryCode name version verbosity (*_overrides*) =
   (*TODO dummy value, da implementare questa parte*)
   (*let ovs = defaultOverrides in*)
   (*let gir(*, girDeps*) = loadRawGIRInfo verbosity name (Some version) (*[]*) (*(ovs.girFixups)*) in*)
-  let gir, _ = loadGIRInfo verbosity name (Some version) [] in
+  let gir, girDeps = loadGIRInfo verbosity name (Some version) [] [] in
   prerr_endline ("Parsing di " ^ name ^ " completato!");
-  (*let dependencies = List.map (fun x -> x.girNSName ) girDeps in*)
+  let dependencies = List.map (fun x -> x.girNSName ) girDeps in 
   (*let apis, deps = filterAPIsAndDeps (*ovs*) gir (*girDeps*) in*)
   let apis = gir.girAPIs |> List.to_seq |> NameMap.of_seq in
-  (*let allAPIs = NameMap.union union_f apis deps in*)
+  let deps = List.map (fun x -> x.girAPIs |> List.to_seq |> NameMap.of_seq) girDeps in
+  let deps = List.fold_left (fun acc m -> NameMap.union union_f acc m) NameMap.empty deps in
+  let allAPIs = NameMap.union union_f apis deps in
+
   let cfg = {modName = name; verbose = verbosity; (*overrides = ovs*)} in
   (*genCode cfg allAPIs (toModulePath name) (genModule apis), dependencies*)
   (*let cfg, cgstate, minfo = setContext cfg apis (toModulePath name) in*)
-  genCode cfg apis (toModulePath name) (fun (cfg, cgstate, minfo) -> genModule (cfg, cgstate, minfo) apis)
+  genCode cfg allAPIs (toModulePath name) (fun (cfg, cgstate, minfo) -> genModule (cfg, cgstate, minfo) apis), dependencies
 
 
   
@@ -61,11 +64,8 @@ let genBindings verbosity library =
   (*let inheritedOverrides = [] in*)
   let outputDir = "bindings" ^ dir_sep ^ library.name in
   let dirExists = file_exists outputDir in
-  begin
   if dirExists
-  then removeDirectoryContents outputDir 
-  else prerr_endline "COGLIONE";
-  end;
+  then removeDirectoryContents outputDir;
   (*let givenOvs = 
     match library.overridesFile with
     | Some x ->  Some {overrideTag = x; overrideText = readFile (x)}
@@ -74,10 +74,11 @@ let genBindings verbosity library =
     match givenOvs with
       | Some x -> [x] @ inheritedOverrides
       | None -> inheritedOverrides*)
-  let m(*  deps'*) = genLibraryCode library.name library.version verbosity (*ovs*) in
-  let _ = writeModuleTree verbosity (Some outputDir) m [] in
-  (*let _ = genConfigFiles (Some outputDir) library.name givenOvs in*)
-  Sys.command ("cp -rf " ^ "base-ocaml/tools " ^ (outputDir ^ dir_sep ^ "tools"))
-
-
-
+  let m, deps' = genLibraryCode library.name library.version verbosity (*ovs*) in
+  let deps = List.filter (fun x -> not (List.mem x ["xlib"; "GModule"])) deps' in
+  let _ = writeModuleTree verbosity (Some outputDir) m deps in
+  genConfigFiles (Some outputDir) library.name [];
+  let _ = Sys.command ("cp -rf " ^ "base-ocaml/tools " ^ (outputDir ^ dir_sep ^ "tools")) in
+  prerr_endline ("Compiling " ^ outputDir ^ " using Dune...");
+  chdir outputDir;
+  Sys.command "dune build" 

@@ -24,7 +24,6 @@ type field =
 
 
 let parseField ns aliases el =
-  prerr_endline ("Inzio il parse Field");
   let name = getAttr "name" el in
   let deprecated = parseDeprecation el in
   let readable = optionalAttr "readable" true el parseBool in
@@ -34,7 +33,7 @@ let parseField ns aliases el =
   in let introspectable = optionalAttr "introspectable" true el parseBool in
   let private_field = optionalAttr "private" false el parseBool in
   let doc = parseDocumentation el in
-  (*TODO skippata la parte del controllo introspectable, flip e company*)
+  try 
   let t, isPtr, callback = 
     if introspectable then
       let callbacks = List.map (parseCallback ns aliases) (parseChildrenWithLocalName "callback" el) in
@@ -65,7 +64,7 @@ let parseField ns aliases el =
                  | None -> false
         in t, Some (is), None
       | [n] -> TInterface n, Some true, None
-      | _ -> assert false
+      | _ -> raise (Failure "error")
       in
   Some { fieldName = name;
          fieldVisible = introspectable && not private_field;
@@ -77,6 +76,7 @@ let parseField ns aliases el =
          fieldDocumentation = doc;
          fieldDeprecated = deprecated;
        }
+  with Failure _ -> prerr_endline "Multiple callbacks in field!"; None  
 
 let parseFields ns aliases el =
   List.filter_map (fun x -> x) (List.map (parseField ns aliases) (parseChildrenWithLocalName "field" el))

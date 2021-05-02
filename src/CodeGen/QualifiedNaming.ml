@@ -35,3 +35,11 @@ let nsOCamlClass minfo nm =
     | true, true -> ocamlIdentifier nm
     | true, false -> nm.name ^ "G." ^ ocamlIdentifier nm
     | false, _ -> "GI" ^ nm.namespace ^ "." ^ nm.name ^ "G." ^ ocamlIdentifier nm
+
+
+let qualifiedSymbol cfg minfo s n =
+  let api = getAPI cfg (TInterface n) in
+  let mp = { modulePathToList = (toModulePath (ucFirst n.namespace)).modulePathToList 
+            @ (submoduleLocation n api).modulePathToList } in
+  let name = {namespace = n.namespace; name = camelCaseToSnakeCase s} in
+  qualified cfg minfo mp name

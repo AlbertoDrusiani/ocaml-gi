@@ -3,6 +3,7 @@ open Naming
 open Ctypes
 open GIR.Enum
 open GIR.Flags
+open GIR.BasicTypes
 
 type enum_or_flag =
   | Enum
@@ -47,7 +48,7 @@ let genEnumOrFlags cgstate minfo n e enumOrFlag =
   let minfo = hline "" minfo in 
   let minfo = line ("type " ^ enumName ^ " = [ " ^ (String.concat " | " variants) ^ " ]") minfo in 
   let minfo = blank minfo in 
-  let minfo = line ("external get_" ^ enumName ^ "_table : unit -> " ^ enumName ^ " GPointer.variant_table = \"" ^ cGetterFn ^ "\"" ) minfo in 
+  let minfo = line ("external get_" ^ enumName ^ "_table : unit -> " ^ enumName ^ " Gpointer.variant_table = \"" ^ cGetterFn ^ "\"" ) minfo in 
   let minfo = line ("let " ^ ocamlTbl ^ " = get_" ^ enumName ^ "_table ()") minfo in 
   let minfo = 
   if enumOrFlag = Enum
@@ -77,19 +78,19 @@ let genEnumOrFlags cgstate minfo n e enumOrFlag =
   in cline "" minfo cgstate
  
 
-let genEnum cfg cgstate minfo n e =
-  let action = fun cgstate minfo -> lazy (genEnumOrFlags cgstate minfo n e Enum) in
-  let fallback = fun cgstate minfo e -> lazy (cfg, cgstate, commentLine minfo ("Could not generate: " ^ describeCGError e)) in
-  handleCGExc (cfg, cgstate, minfo) fallback action
+let genEnum cgstate minfo n e =
+  let action = fun cgstate minfo -> genEnumOrFlags cgstate minfo n e Enum in
+  let fallback = fun cgstate minfo e -> cgstate, commentLine minfo ("Could not generate: " ^ describeCGError e) in
+  handleCGExc (cgstate, minfo) fallback action
   (*try
     cfg, cgstate, genEnumOrFlags minfo n e Enum
   with Failure exc -> cfg, cgstate, (commentLine minfo ("Could not generate: " ^ exc))*)
 
 
-let genFlags cfg cgstate minfo n (Flags enum) =
-  let action = fun cgstate minfo -> lazy (genEnumOrFlags cgstate minfo n enum Flag) in
-  let fallback = fun cgstate minfo e -> lazy (cfg, cgstate, commentLine minfo ("Could not generate: " ^ describeCGError e)) in
-  handleCGExc (cfg, cgstate, minfo) fallback action
+let genFlags cgstate minfo n (Flags enum) =
+  let action = fun cgstate minfo -> genEnumOrFlags cgstate minfo n enum Flag in
+  let fallback = fun cgstate minfo e -> cgstate, commentLine minfo ("Could not generate: " ^ describeCGError e) in
+  handleCGExc (cgstate, minfo) fallback action
  (* try
     cfg, cgstate, genEnumOrFlags minfo n enum Flag
   with Failure exc -> cfg, cgstate, (commentLine minfo ("Could not generate: " ^ exc))*)

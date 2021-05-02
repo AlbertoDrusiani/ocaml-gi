@@ -59,7 +59,6 @@ let resolveInternalType nm =
 
 
 let parseObject ns aliases el =
-  prerr_endline ("Inizio il parse Object");
   let name = parseName ns el in
   let deprecated = parseDeprecation el in
   let doc = parseDocumentation el in

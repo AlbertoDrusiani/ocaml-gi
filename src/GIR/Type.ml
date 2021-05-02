@@ -74,7 +74,7 @@ let rec parseArrayInfo ns aliases typ =
 and parseType typ ns aliases =
     match parseTypeElements typ ns aliases with
     | [Some e] ->  e
-    | [] -> assert false (*TODO molte librerie entrano qui, vuol dire che non c'è un tipo assegnato all'elemento*)
+    | [] -> assert false 
     | [None] -> assert false
     | _ -> assert false
 
@@ -149,7 +149,7 @@ and parseClosure typ ns aliases =
 and queryType typ ns aliases =
     match parseTypeElements typ ns aliases with
     | [Some e] -> Some e
-    | [] -> None (*TODO* in Haksell [] cosa significa? *)
+    | [] -> None
     | [None] -> assert false
     | _ -> assert false
 
@@ -169,7 +169,7 @@ let parseCTypeNameElements typ =
     List.filter_map f (types @ arrays)
 
 
-(* xml -> string -> type_ml option TODO *)
+(* xml -> string -> type_ml option *)
 let parseOptionalType typ ns aliases =
     match parseTypeElements typ ns aliases with
     | [e] -> e

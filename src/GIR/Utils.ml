@@ -20,5 +20,5 @@ let rec list_min l min =
 (* 'a list -> 'a -> 'a -> 'a option *)
 let maximumMay l acc min =
     match list_max l acc with
-    | c when c == min -> None
+    | c when c = min -> None
     | m -> Some m

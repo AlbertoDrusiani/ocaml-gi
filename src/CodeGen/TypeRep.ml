@@ -29,7 +29,7 @@ let rec typeShow currNS tr =
   | RowCon (More, t) -> "[> " ^ (typeShow currNS t) ^ "]"
   | TypeVarCon (_, t) -> typeShow currNS t
   | PolyCon NameCon n -> typeShow currNS (NameCon n)
-  | PolyCon t -> " " ^ (typeShow currNS t)
+  | PolyCon t -> "`" ^ (typeShow currNS t)
   | NameCon n -> nsOCamlType currNS n
   | TextCon text -> text
   | TupleCon treps -> "(" ^ (String.concat " * " (List.map (typeShow currNS) treps)) ^ ")"
@@ -43,9 +43,9 @@ let rec methodTypeShow currNS tr =
   | ObjCon t -> (methodTypeShow currNS t) ^ " Gobject.obj"
   | RowCon (Less, t) -> "[< " ^ (methodTypeShow currNS t) ^ "]"
   | RowCon (More, t) -> "[> " ^ (methodTypeShow currNS t) ^ "]"
-  | TypeVarCon (var, t) -> "(" ^ (methodTypeShow currNS t) ^ " as " ^ var ^ ")"
+  | TypeVarCon (var, t) -> "(" ^ (methodTypeShow currNS t) ^ " as '" ^ var ^ ")"
   | PolyCon NameCon n -> methodTypeShow currNS (NameCon n)
-  | PolyCon t -> " " ^ (methodTypeShow currNS t)
+  | PolyCon t -> "`" ^ (methodTypeShow currNS t)
   | NameCon n -> nsOCamlType currNS n
   | TextCon text -> text
   | TupleCon treps -> "(" ^ (String.concat " * " (List.map (methodTypeShow currNS) treps)) ^ ")"

@@ -84,7 +84,7 @@ let findMethod methods n =
 let guessWriteNullability methods p =
   
   let nullableSetter =
-    let regexp = Str.regexp "-" in
+    let regexp = Str.regexp "[-]" in
     let prop_name = Str.global_replace regexp "_" p.propName in
     match findMethod methods ("set_" ^ prop_name) with
     | None -> None
@@ -108,7 +108,7 @@ let guessWriteNullability methods p =
 let guessReadNullability methods p =
   
   let nullableGetter =
-    let regexp = Str.regexp "-" in
+    let regexp = Str.regexp "[-]" in
     let prop_name = Str.global_replace regexp "_" p.propName in
     match findMethod methods ("get_" ^ prop_name) with
     | None -> None

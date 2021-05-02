@@ -15,6 +15,15 @@ let rec takeWhile f l =
       | false -> []
 
 
+let dropWhile f l =
+  let prefixLen = List.length (takeWhile f l) in
+  let textLen = List.length l - prefixLen in
+  let rec remove l =
+    match l with
+    | [] -> []
+    | _::xs when List.length l > textLen  -> remove xs
+    | xs -> xs 
+  in remove l
 
 (*prendo la lista senza l'ultimo elemento, la init di Haskell*)
 (*noLast :: [a] -> [a]*)
@@ -59,7 +68,7 @@ let splitOn x xs =
     let rec go y acc =
         match y with
         | [] -> [List.rev acc]
-        | y :: ys -> if x == y then List.rev acc :: go ys [] else go ys (y :: acc)
+        | y :: ys -> if x = y then List.rev acc :: go ys [] else go ys (y :: acc)
     in go xs []
 
 
@@ -80,7 +89,7 @@ let writeFile fname str =
 let rec mapNth n fn l =
     match n, fn, l with
     | _, _, [] -> []
-    | n, fn, x::xs when n == 0 -> fn x :: xs
+    | n, fn, x::xs when n = 0 -> fn x :: xs
     | n, fn, x::xs -> x :: mapNth (n-1) fn xs
 
 
@@ -128,9 +137,10 @@ let breakOnFirst str1 str2 =
 
 
 let isPrefixOf prefix str =
-  let regexp = Str.regexp ("/^" ^ prefix) in
-  let replaced = Str.replace_first regexp str "" in
-  if (prefix ^ replaced) = str
+  let regexp = Str.regexp ("^" ^ prefix) in
+  let replaced = Str.replace_first regexp "" str in
+  let flag = (prefix ^ replaced) = str in
+  if flag
   then true
   else false
 

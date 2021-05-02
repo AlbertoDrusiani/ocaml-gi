@@ -15,6 +15,7 @@ let argsTypeRep cfg minfo args =
 
 
 let ocamlMarshaller args out sigName onName cfg minfo =
+
   match args with
   | [] -> "marshal_unit"
   | _ ->

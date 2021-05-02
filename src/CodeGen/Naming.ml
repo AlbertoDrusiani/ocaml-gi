@@ -13,11 +13,11 @@ let rec sanitize s =
 
 
 let underscoresToHypens =
-    Str.global_replace (Str.regexp "_") "-"
+    Str.global_replace (Str.regexp "[_]") "-"
 
 
 let hyphensToUnderscores =
-    Str.global_replace (Str.regexp "-") "_"
+    Str.global_replace (Str.regexp "[-]") "_"
 
 
 let explode s =
@@ -26,14 +26,18 @@ let explode s =
 (* string -> string *)
 let camelCaseToSnakeCase s =
     let f c =
-        match c == Char.uppercase_ascii c with
+        match c = (Char.uppercase_ascii c) && (c != '_') with
         | true -> "_" ^ String.lowercase_ascii (String.make 1 c)
         | false -> String.make 1 c
-    in let rec g e =
+    (*in let rec g e =
         match e with
         | [] -> []
         | x::xs -> f x :: g xs
-    in String.concat "" (g (explode s))
+    in String.concat "" (g (explode (lcFirst s)))*)
+     in String.concat "" (List.map f (explode (lcFirst s)))
+ 
+
+     
 
 
 (* string -> string list *)
@@ -43,7 +47,7 @@ let splitCamelCase t =
         | [], [] -> []
         | [], acc -> List.rev acc
         | x::xs, [] -> splitCamelCase' xs [[x]]
-        | x::xs, acc when x == (String.uppercase_ascii x) -> splitCamelCase' xs ([x]::acc)
+        | x::xs, acc when x = (String.uppercase_ascii x) -> splitCamelCase' xs ([x]::acc)
         | x::xs, ac::acs -> splitCamelCase' xs ((ac @ [x])::acs)
     in splitCamelCase' t []
 
@@ -76,19 +80,13 @@ let lowerName n =
     match n with
     | {namespace = _; name = s} -> lowerSymbol s
 
-(* (string -> bool) -> string -> (string*string)*)
-(*let span p t =
-  let exp = explode t in
-  let rec f l acc =
-    match l with
-    | [] -> acc
-    | (x::xs) as r -> 
-      try
-        let _ = p x in
-        f xs (acc ^ x, String.concat "" xs)
-      with Failure _ -> (acc, r)
-  in f exp ("", "")*)
 
+let span p s =
+  let exp = explode s in
+  takeWhile p exp, dropWhile p exp
+
+
+let is_digit = function '0' .. '9' -> true | _ -> false
 
 let escapeOCamlReserved s =
     match s with
@@ -103,9 +101,11 @@ let escapeOCamlReserved s =
     | "match" -> "match_"
     | "and" -> "and_"
     | "method" -> "method_"
-   (* | _ -> let (nums, text) = *) (*TODO da sistemare con span che non c'è in Ocaml*)
-    | _ -> s
-
+    | t -> 
+        let (nums, text) = span is_digit t in
+        let text = List.to_seq text |> String.of_seq in
+        let nums1 = List.to_seq nums |> String.of_seq in
+        text ^ nums1
 
 
 
@@ -122,13 +122,13 @@ let ocamlIdentifierNs n =
  
 let nsOCamlType currNs n =
     match n, currNs with
-    | { namespace = ns; name = nm;}, currNs when ns == currNs -> nm ^ "T.t"
+    | { namespace = ns; name = nm;}, currNs when ns = currNs -> nm ^ "T.t"
     | { namespace = ns; name = nm;}, _ -> "GI" ^ ns ^ "." ^ nm ^ "T.t"
 
 
 let nsOCamlO currNs n =
     match n, currNs with
-    | {namespace = ns; name = nm;}, currNs when ns == currNs -> "#" ^ nm ^ "T." ^ (ocamlIdentifier n) ^ "_o"
+    | {namespace = ns; name = nm;}, currNs when ns = currNs -> "#" ^ nm ^ "T." ^ (ocamlIdentifier n) ^ "_o"
     | {namespace = ns; name = nm;}, _ -> "#GI" ^ ns ^ "." ^ nm ^ "T." ^ (ocamlIdentifier n) ^ "_o"
 
 let signalOCamlName s =

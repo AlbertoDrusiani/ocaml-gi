@@ -262,26 +262,26 @@ let fixupGIRDocument rules doc =
   fixupGIR rules doc
 
 (* bool -> Set (string*string) -> Map (string*string) xml -> string list -> GIRRule list -> Map (string*string) xml *)
-let rec loadDependencies verbose requested loaded (*extraPaths*) rules =
+let rec loadDependencies verbose requested loaded extraPaths rules =
   match StringStringSet.is_empty requested with
   | true -> loaded
   | false ->
     (*TODO chissà se la trasformazione mantiene l'ordinamento...*)
     let name, version = List.nth (StringStringSet.to_seq requested |> List.of_seq) 0 in
-    let doc = fixupGIRDocument rules (readGiRepository verbose name (Some version) (*extrapaths*)) in
+    let doc = fixupGIRDocument rules (readGiRepository verbose name (Some version) extraPaths) in
     let newLoaded = StringStringMap.add (name, version) doc loaded in
     let keys = List.map (fun x -> match x with | (key, _) -> key) (StringStringMap.to_seq newLoaded |> List.of_seq) in
     let loadedSet = StringStringSet.of_seq (List.to_seq keys) in
     let newRequested = StringStringSet.union requested (documentListIncludes doc) in
     let notYetLoaded = StringStringSet.diff newRequested loadedSet in
-    loadDependencies verbose notYetLoaded newLoaded (*extrapaths*) rules
+    loadDependencies verbose notYetLoaded newLoaded extraPaths rules
 
 
 
 (* bool -> string -> string option -> xml *)
-let loadGIRFile verbose name version (*extraPaths*) rules =
-  let doc = fixupGIRDocument rules (readGiRepository verbose name version (*extraPaths*)) in
-  let deps = loadDependencies verbose (documentListIncludes doc) StringStringMap.empty (*extrapaths*) rules in
+let loadGIRFile verbose name version extraPaths rules =
+  let doc = fixupGIRDocument rules (readGiRepository verbose name version extraPaths) in
+  let deps = loadDependencies verbose (documentListIncludes doc) StringStringMap.empty extraPaths rules in
   doc, deps
 
 (* gir_info_parse -> string*gir_info result*)
@@ -298,20 +298,12 @@ let toGIRInfo info =
 
 
 (* bool -> string -> string option -> gir_info *)
-let loadRawGIRInfo verbose name version (*extrapaths*) =
-  let doc = readGiRepository verbose name version (*extrapaths*) in
+let loadRawGIRInfo verbose name version extrapaths =
+  let doc = readGiRepository verbose name version extrapaths in
   match toGIRInfo (parseGIRDocument AliasMap.empty doc) with
-  | Error err -> prerr_endline ("loadRawGIRInfo, API.ml riga 211: " ^ err); assert false
+  | Error _ -> assert false
   | Ok docGIR -> docGIR
 
-(*
-let foldM_result f x l =
-  let rec g a b =
-    match a with
-    | Error e -> Error e
-    | Ok a -> f a b
-  in List.fold_left g (Ok x) l
-*)
 
 
 (*FIXME dovrebbe funzionare ma fa schifo, soluzioni con una fold?*)
@@ -414,8 +406,8 @@ let fixupGIRInfos doc deps =
 
 
 (* string -> bool -> string -> string option -> gir_info*(gir_info list)*)
-let loadGIRInfo verbose name version (* extraPaths *) rules =
-  let doc, deps = loadGIRFile verbose name version (* extraPaths *) rules in
+let loadGIRInfo verbose name version extraPaths rules =
+  let doc, deps = loadGIRFile verbose name version extraPaths rules in
   let deps_elems = List.map (fun x -> match x with | (_, value) -> value) (StringStringMap.bindings deps) in
   (*TODO da capire la questione alias, da dove lo passo? Per ora passo mappa vuota, magari è giusto*)
   let f_union _ m1 _ =

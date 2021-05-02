@@ -23,7 +23,6 @@ type interface ={
 
 
 let parseInterface ns aliases el =
-  prerr_endline ("Inizio il parse Interface");
   let name = parseName ns el in
   let props = List.map (parseProperty ns aliases) (parseChildrenWithLocalName "property" el) in
   let signals = List.map (parseSignal ns aliases) (parseChildrenWithNSName GLibGIRNS "signal" el) in

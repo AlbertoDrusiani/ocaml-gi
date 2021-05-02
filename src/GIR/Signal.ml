@@ -13,7 +13,6 @@ type signal = {
 
 
 let parseSignal ns aliases el =
-  prerr_endline ("Inizio il parseSignal");
   let n = getAttr "name" el in
   let detailed = optionalAttr "detailed" false el parseBool in
   let deprecated = parseDeprecation el in
