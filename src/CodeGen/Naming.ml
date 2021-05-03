@@ -26,14 +26,9 @@ let explode s =
 (* string -> string *)
 let camelCaseToSnakeCase s =
     let f c =
-        match c = (Char.uppercase_ascii c) && (c != '_') with
+        match (c = (Char.uppercase_ascii c)) && (c != '_') with
         | true -> "_" ^ String.lowercase_ascii (String.make 1 c)
         | false -> String.make 1 c
-    (*in let rec g e =
-        match e with
-        | [] -> []
-        | x::xs -> f x :: g xs
-    in String.concat "" (g (explode (lcFirst s)))*)
      in String.concat "" (List.map f (explode (lcFirst s)))
  
 

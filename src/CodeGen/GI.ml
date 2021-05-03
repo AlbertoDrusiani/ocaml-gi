@@ -65,7 +65,8 @@ let genBindings verbosity library =
   let outputDir = "bindings" ^ dir_sep ^ library.name in
   let dirExists = file_exists outputDir in
   if dirExists
-  then removeDirectoryContents outputDir;
+  then 
+  removeDirectoryContents outputDir;
   (*let givenOvs = 
     match library.overridesFile with
     | Some x ->  Some {overrideTag = x; overrideText = readFile (x)}

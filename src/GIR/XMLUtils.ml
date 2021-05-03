@@ -63,10 +63,8 @@ let girNamespaceToPrefix ns =
 let get_prefix str =
     let l = String.split_on_char ':' str in
     match l with
-    | _::[] -> None
-    | x::_ -> Some x
+    | [xs; _] -> Some xs
     | _ -> None
-
 
 (*estrae il localName dalla stringa nome di un elemento/attributo*)
 (* string -> string *)
@@ -140,8 +138,22 @@ let childElemsWithLocalName n el =
 (* come sopra ma specificando anche il namespace *)    
 (* GIRXMLNamespace -> string -> xml -> xml list *)
 let childElemsWithNSName ns n el =
-    let name = {nameLocalName = n; nameNamespace = Some (girNamespace ns); namePrefix = None;} in
+   (* prerr_endline("tag elemento: " ^ Xml.tag el);
+    prerr_endline("NOME NUOVO");
+    prerr_endline("localName: " ^ n);
+    prerr_endline("nameSpace: " ^ (girNamespace ns));
+    prerr_endline("namePrefix: " ^ (girXMLNamespaceToPrefix ns));
+    prerr_endline("\n");*)
+    let name = {nameLocalName = n; nameNamespace = Some (girNamespace ns); namePrefix = Some (girXMLNamespaceToPrefix ns);} in
     let nameMatch e = element_to_name e |> (fun x -> x = name) in
+    (*let _ = List.iter (
+        fun x -> 
+                if localName(Xml.tag x) = "signal" then
+                (prerr_endline ("nome: " ^ Xml.tag x);
+                 prerr_endline ("localName: " ^ localName(Xml.tag x));
+                 prerr_endline ("prefix: " ^ Option.value (get_prefix (Xml.tag x)) ~default:"");
+                 prerr_endline ("namespace: " ^(get_prefix (Xml.tag x) |> prefixToGIRNamespace));))
+        (subelements el) in*)
     List.filter nameMatch (subelements el)
 
 (* restituisce il primo figlio di un elemento con il nome locale specficato *)

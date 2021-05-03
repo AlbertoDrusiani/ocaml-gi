@@ -1,5 +1,6 @@
 module GOI = GObject_introspection
 open GIR.BasicTypes
+open Ctypes
 
 type field_info = {
     fieldInfoOffset: int;
@@ -41,3 +42,19 @@ let girUnionFieldInfo ns name =
     let seq = List.to_seq !fieldInfos in
     size, StringMap.of_seq seq
   | None -> assert false
+
+
+type typelib = {
+  typelibNamespace: string;
+  typelibVersion: string;
+  _typelibPtr: typelib ptr;
+}
+
+
+(*let girLookupSymbol t symbol =
+  let funPtrPtr = allocate funptr_of_raw_address 3 in
+
+
+
+let girLoadGType typelib typeInit =
+  GType*)

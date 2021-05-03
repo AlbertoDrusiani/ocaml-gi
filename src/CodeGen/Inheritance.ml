@@ -53,8 +53,9 @@ module MakeInheritableUtils (I: Inheritable) = struct
 
   let fullObjectInheritableList cfg n obj =
     let iT = instanceTree cfg n in
-    let _ = List.flatten (List.map (apiInheritables cfg) (n::iT)) in
-    (*let l2 = *)List.flatten (List.map (apiInheritables cfg) obj.objInterfaces)
+    let l1 = List.flatten (List.map (apiInheritables cfg) (n::iT)) in
+    let l2 = List.flatten (List.map (apiInheritables cfg) obj.objInterfaces) in
+    l1 @ l2
     (*let acc = ref [] in
     for i = (List.length l1-1) downto 0 do
       for j = (List.length l2-1) downto 0 do
@@ -63,9 +64,9 @@ module MakeInheritableUtils (I: Inheritable) = struct
 
   
   let rec fullInterfaceInheritableList cfg n iface =
-    let _ = List.map (fun x -> (n, x)) (I.ifInheritables iface) in
-    let _ = List.map (fullAPIInheritablesList cfg) iface.ifPrerequisites |> List.flatten in
-    assert false
+    let l1 = List.map (fun x -> (n, x)) (I.ifInheritables iface) in
+    let l2 = List.map (fullAPIInheritablesList cfg) iface.ifPrerequisites |> List.flatten in
+    l1 @ l2
     (*TODO*)
   
   and fullAPIInheritablesList cfg n =
@@ -104,7 +105,7 @@ module MakeInheritableUtils (I: Inheritable) = struct
     in let filterTainted xs =
       match xs with
       | [(_, (_, name, prop))] -> [(name, prop)] 
-      | _ -> assert false
+      | _ -> []
 
     in 
     let l = List.fold_left filterDups StringMap.empty inheritables

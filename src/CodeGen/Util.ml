@@ -3,7 +3,8 @@
 (*take :: Num -> [a] -> [a] *)
 let rec take k xs = match xs with
     | [] -> []
-    | x::xs -> if k = 1 then [x] else x::take (k-1) xs
+    | _ when k = 0 -> [] 
+    | x::xs -> x::take (k-1) xs
 
 
 let rec takeWhile f l =
@@ -94,13 +95,17 @@ let rec mapNth n fn l =
 
 
 (* stackoverflow https://stackoverflow.com/questions/56327912/how-to-remove-a-non-empty-directory-with-ocaml*)
-let rec removeDirectoryContents path = 
-  match Sys.is_directory path with
-  | true ->
-    Sys.readdir path |>
-    Array.iter (fun name -> removeDirectoryContents (Filename.concat path name));
-    Unix.rmdir path
-  | false -> Sys.remove path
+let rec removeDirectoryContents path =
+  (*TODO ho aggiunto il try-catch perché faila a rimuovere i symlink rotty*)
+  try
+    match Sys.is_directory path with
+    | true ->
+      Sys.readdir path |>
+      Array.iter (fun name -> removeDirectoryContents (Filename.concat path name));
+      Unix.rmdir path
+    | false -> 
+    Sys.remove path
+  with Sys_error _ -> Sys.remove path
 
 
 let range a b =

@@ -11,7 +11,6 @@ open TypeRep
 
 (* config -> module_info -> int -> arg -> module_info*string*)
 let foreignArgConverter cfg minfo i a =
-  (*try*)
   let optionVal argNum justConv nothingVal =
     let argNumStr = string_of_int argNum in
     let args = String.concat ", " [argNumStr; justConv; nothingVal] in
@@ -22,40 +21,47 @@ let foreignArgConverter cfg minfo i a =
   then minfo, optionVal i conv "NULL"
   else minfo, conv
 
-(*with CGError (CGErrorNotImplemented e) ->prerr_endline(e); minfo, ""*)
 
 
 
-let arrayLenghtsMap callable =
-  let rec go p acc =
-    match p with
+
+let arrayLengthsMap callable =
+  prerr_endline("Callable 29");
+  let rec go l acc =
+    match l with
     | [] -> acc
-    | x::xs -> 
-        match x.argType with
-        |TCArray (false, fixedSize, length, _) -> 
-            if fixedSize > -1 || length = -1
-            then go xs acc
-            else go xs ((x, List.nth callable.args length) :: acc)
-        | _ -> go xs acc
-    in go callable.args []
+    | x::xs ->
+      match x.argType with
+      | TCArray (false, fixedSize, length, _) ->
+        prerr_endline(string_of_int length);
+        if fixedSize > -1 || length = -1
+        then go xs acc
+        else go xs ((x, List.nth callable.args length)::acc)
+      | _ -> go xs acc
+  
+  in go callable.args []
 
 
 
 let arrayLengths callable =
-  List.map snd (arrayLenghtsMap callable) @
+  List.map snd (arrayLengthsMap callable) @
   match callable.returnType with
   | Some (TCArray (false, (-1), length, _)) ->
+    prerr_endline("callable 50");
     if length > 1 then [List.nth callable.args length] else []
   | _ -> []
 
 
 let callableHInArgs callable expose =
+  prerr_endline("callable 56");
   let inArgs = List.filter (fun x -> x.direction != DirectionOut) callable.args in
   let closures = List.map (fun x -> x.argClosure) inArgs 
-                |> List.filter (fun x -> x!= 1)
+                |> List.filter (fun x -> x != -1)
                 |> List.map (fun x -> List.nth callable.args x) in
+  prerr_endline("callable 61");
+
   let destroyers = List.map (fun x -> x.argDestroy) inArgs 
-                |> List.filter (fun x -> x!= 1)
+                |> List.filter (fun x -> x != -1)
                 |> List.map (fun x -> List.nth callable.args x) in
   let omitted = 
     match expose with
@@ -73,20 +79,6 @@ let callableHOutArgs c =
   List.filter (fun x -> not (List.mem x (arrayLengths c))) outArgs
 
 
-let arrayLenghtsMap callable =
-  
-  let rec go l acc =
-    match l with
-    | [] -> acc
-    | x::xs ->
-      match x.argType with
-      | TCArray (false, fixedSize, length, _) ->
-        if fixedSize > -1 || length = -1
-        then go xs acc
-        else go xs ((x, List.nth callable.args length)::acc)
-      | _ -> go xs acc
-  
-  in go callable.args []
 
 let fixupCallerAllocates c =
 
@@ -98,9 +90,11 @@ let fixupCallerAllocates c =
       else a
     | _ -> a
 
-  in let lengthsMap = (List.map swap (arrayLenghtsMap c)) |> List.to_seq |> ArgMap.of_seq
+  in let lengthsMap = (List.map swap (arrayLengthsMap c)) |> List.to_seq |> ArgMap.of_seq
 
-  in let fixupLength a =
+  in 
+  prerr_endline ("callable 96");
+  let fixupLength a =
     match ArgMap.find_opt a lengthsMap with
     | None -> a
     | Some array -> 
@@ -170,8 +164,9 @@ let genOCamlExternal cfg cgstate minfo mn cSymbol callable =
       let minfo = line outArg minfo in
       let fn = mlGiPrefix mn cSymbol in
       let nativeFn = if List.length inArgs > 5 then fn ^ "_bc" else "" in
+      prerr_endline("callable 167");
       if callable.callableThrows 
-      then cgstate, minfo (*raise (CGErrorNotImplemented "Methods throwing exceptions are not implemented yet")*)
+      then notImplementedError ("Methods throwing exceptions are not implemented yet")
       else cgstate, line ("= " ^ addQuote nativeFn ^ " " ^ addQuote fn) minfo
     ) minfo in
     cgstate, minfo
@@ -182,8 +177,12 @@ let genMlMacro cfg cgstate minfo mn cSymbol callable =
   let inArgs = callableHInArgs' callable in
   let nArgs = List.length callable.args in
   let outArgs = callableHOutArgs callable in
-  if List.for_all (fun a -> a.direction = DirectionInout) callable.args
-  then raise (CGError (CGErrorNotImplemented "genMlMacro: inout parameters are not implemented yet"))
+  if List.exists (fun a -> a.direction = DirectionInout) callable.args
+  then 
+    let _ = prerr_endline("callable 182") in
+
+  raise (CGError (CGErrorNotImplemented "genMlMacro: inout parameters are not implemented yet"));
+  (*raise (Failure "prova");*)
   else 
     if outArgs != []
     then 

@@ -74,6 +74,7 @@ let parseObject ns aliases el =
     | "intern" -> resolveInternalType name
     | fn -> fn
   in let typeName = getAttrWithNamespace GLibGIRNS "type-name" el in
+  
   let signals =  List.map (parseSignal ns aliases) (parseChildrenWithNSName GLibGIRNS "signal" el) in
   let refFunc = queryAttrWithNamespace GLibGIRNS "ref-func" el in
   let unrefFunc = queryAttrWithNamespace GLibGIRNS "unref-func" el in

@@ -52,8 +52,9 @@ let optionalAttr attr def element func =
 (* string -> string -> BasicTypes.name*)
 let qualifyName n ns =
     match String.split_on_char '.' n with
-    | x::[] -> nameInCurrentNS ns x
-    | x::xs::[] -> {namespace = x; name = xs;}
+    | [ns; name] -> {namespace = ns; name = name;}
+    | [name] -> nameInCurrentNS ns name
+    (*| x::xs::[] -> {namespace = x; name = xs;}*)
     | _ -> assert false
 
 (* xml -> string -> BasicTypes.name *)
@@ -102,7 +103,10 @@ let parseAllChildrenWithLocalName n element =
 
 (* GIRXMLNamespace -> string -> xml list *)    
 let parseChildrenWithNSName ns n element =
-    let introspectable e = (not (Option.equal (fun x y -> x = y) (lookupAttr "introspectable" e) (Some "0"))) in
+    let introspectable e = (not(Option.equal (fun x y -> x = y) (lookupAttr "introspectable" e) (Some "0"))) in
+    (*let howmany = List.length (childElemsWithNSName ns n element) in*)
+    (*prerr_endline ("__SONO___: " ^ string_of_int(howmany));
+    prerr_endline ("FILTRATI SONO: " ^ string_of_int (List.length (List.filter introspectable (childElemsWithNSName ns n element))));*)
     List.filter introspectable (childElemsWithNSName ns n element)
 
 

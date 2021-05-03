@@ -103,10 +103,10 @@ let ocamlDataConv cfg minfo isNullable tp =
     | APIObject _ -> handleObject
     | APIStruct _ ->
       let moduleT = getModuleType minfo n in
-      "(unsafe_pointer _ " ^ moduleT ^ " data_conv"
+      "(unsafe_pointer : " ^ moduleT ^ " data_conv)"
     | APIUnion _ ->
       let moduleT = getModuleType minfo n in
-      "(unsafe_pointer _ " ^ moduleT ^ " data_conv"
+      "(unsafe_pointer : " ^ moduleT ^ " data_conv)"
     end
 
 
@@ -312,9 +312,13 @@ let outParamOcamlType cfg cgstate minfo t =
     | APIEnum _ -> cgstate, handleEnum ocamlName
     | APIInterface _ -> handleObj n
     | APIObject _ -> handleObj n
-    | _ -> raise (CGError (CGErrorNotImplemented "(outParamOcamlType) can't handle this type"))
+    | _ ->  prerr_endline("conversions 315");
+ raise (CGError (CGErrorNotImplemented "(outParamOcamlType) can't handle this type"))
     end
-  | TGValue -> assert false (*in haskell non c'è nel pattern matching, com'è possibile?*)
+  | TGValue ->   prerr_endline("conversions 318");
+raise (CGError (CGErrorNotImplemented "(outParamOcamlType) can't handle this type"))
+  
+  (*in haskell non c'è nel pattern matching, com'è possibile?*)
 
 
 
@@ -428,7 +432,10 @@ let cType cfg tp =
       | TPtr -> cToOCamlValueErr "TPtr"
       | TIntPtr -> cToOCamlValueErr "TIntPtr"
       | TUIntPtr -> cToOCamlValueErr "TUIntPtr"
-      | _ -> raise (CGError (CGErrorNotImplemented "(cToOCamlValue) BasicType isn't implemented because this type should not be nullable" ))
+      | _ -> 
+        prerr_endline("conversions 436");
+
+      raise (CGError (CGErrorNotImplemented "(cToOCamlValue) BasicType isn't implemented because this type should not be nullable" ))
       end
     | _, Some TError -> cToOCamlValueErr "TError"
     | _, Some TVariant -> cToOCamlValueErr "TVariant"

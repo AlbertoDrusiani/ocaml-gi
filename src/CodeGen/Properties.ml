@@ -86,7 +86,7 @@ let genPropertyGetter cfg minfo getter classe prop =
     if alreadyDefProp
     then getter ^ "_" ^ ocamlIdentifier classe
     else getter
-  in let minfo = gline ("  method set_" ^ getterDecl ^ " = Gobject.get " ^ classe.name ^ ".P." ^ getter ^ " obj") minfo in
+  in let minfo = gline ("  method " ^ getterDecl ^ " = Gobject.get " ^ classe.name ^ ".P." ^ getter ^ " obj") minfo in
   minfo 
 
 
@@ -101,6 +101,8 @@ let genOneProperty cfg minfo owner prop =
     (List.mem PropertyWritable flags) && (not (List.mem PropertyConstructOnly flags))
   in let readable = List.mem PropertyReadable flags in
   let constructOnly = List.mem PropertyConstructOnly flags in
+    prerr_endline("property ");
+
   if prop.propTransfer != TransferNothing
   then
     notImplementedError ("Property " ^ pName ^ " has unsupported transfer type");
@@ -125,7 +127,7 @@ let genOneProperty cfg minfo owner prop =
 
 let genMakeParams cfg minfo className props =
   let mayCons constrName = "may_cons P." ^ constrName ^ " " ^ constrName in
-  let emptyMake = "let make_params ~cont pl = const pl" in
+  let emptyMake = "let make_params ~cont pl = cont pl" in
   let inheritedMake parent = "let make_params = " ^ parent.name ^ ".make_params" in
   let isConstructor prop = List.mem PropertyWritable prop.propFlags in
   let constructors = List.filter isConstructor props in
@@ -148,6 +150,9 @@ let genMakeParams cfg minfo className props =
       indent (
         fun minfo -> 
           let numConstructors = List.length underlinedConstrNames in
+          (*if className.name = "BufferedInputStream"
+          then let _ = prerr_endline (string_of_int(numConstructors)) in assert false
+          else*)
           let firstConstrs = take (numConstructors - 1) underlinedConstrNames in
           let lastConstr = List.rev underlinedConstrNames |> List.hd in
           let minfo = line "let pl = (" minfo in
@@ -155,9 +160,9 @@ let genMakeParams cfg minfo className props =
             indent (
               fun minfo ->
                 let minfo = List.fold_left (fun minfo cName -> line (mayCons cName ^ " (") minfo) minfo firstConstrs in
-                let minfo = line (mayCons lastConstr ^ " pl" ^ (String.make numConstructors ')')) minfo in
-                let minfo = line "cont pl" minfo in
+                let minfo = line (mayCons lastConstr ^ " pl" ^ (String.make numConstructors ')') ^ " in") minfo in
                 0, minfo) minfo
+          in let minfo = line "cont pl" minfo
           in cgstate, minfo
             ) minfo
     in minfo

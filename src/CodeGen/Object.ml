@@ -71,7 +71,11 @@ let genSignalClass (cfg, minfo) n o =
             | _ -> assert false 
     ) minfo o.objInterfaces in
     minfo
-  in let minfo = List.fold_left (fun info s -> genGSignal s n cfg info) minfo o.objSignals in
+  in 
+  (*if n.name = "Cancellable" 
+  then let _ = prerr_endline (string_of_int(List.length o.objSignals)) in assert false;
+  else*)
+  let minfo = List.fold_left (fun info s -> genGSignal s n cfg info) minfo o.objSignals in
   let minfo = gline "end" minfo  in
   gblank minfo
 
@@ -89,7 +93,7 @@ let cTypeInit cTypeName typeInit =
 let genCObjectTypeInit cgstate minfo o n =
   match o with
   | obj when obj.objTypeInit != "" -> 
-      let cgstate, minfo = cline (cTypeInit (camelCaseToSnakeCase n.namespace ^ n.name) obj.objTypeInit) minfo cgstate  in
+      let cgstate, minfo = cline (cTypeInit (camelCaseToSnakeCase (n.namespace ^ n.name)) obj.objTypeInit) minfo cgstate  in
       cgstate, minfo
   | _ -> cgstate, minfo
 
@@ -214,6 +218,7 @@ let genAdditionalObjectConstructor n ocamlClassName m cfg minfo =
 
 
 let genObject' (cfg, cgstate, minfo) n o ocamlName =
+prerr_endline ("______GENOBJECT'");
   let parents = instanceTree cfg n in 
   let name' = upperName n in
   let nspace = n.namespace in
@@ -235,7 +240,9 @@ let genObject' (cfg, cgstate, minfo) n o ocamlName =
       | {namespace = "GtkSource"; _} -> parentClass ^ "_skel"
       | _ -> "GObj.gtkobj"
       end
-    in let minfo = gline ("  inherit " ^ parentSkelClass ^ " obj") minfo in
+    in 
+    prerr_endline ("Object 244");
+    let minfo = gline ("  inherit " ^ parentSkelClass ^ " obj") minfo in
     let minfo = List.fold_left (
         fun minfo iface ->
           match NameSet.mem iface (NameSet.union buggedIfaces excludeFiles) with
@@ -246,27 +253,29 @@ let genObject' (cfg, cgstate, minfo) n o ocamlName =
     ) minfo o.objInterfaces 
     in gline ("  method as_" ^ ocamlName ^ " = (obj :> " ^ nsOCamlType n.namespace n ^ " Gobject.obj)") minfo in
   let minfo = genMlTypeInit minfo n in
-  (*TODO, va ma entra in un assert false, suppongo a causa della funzioni
-    all'interno di inheritance che non sono implementate
-  
   let cgstate, minfo = group (
     fun minfo -> 
       let minfo = genObjectProperties cfg cgstate minfo n o in
       let minfo = gblank minfo in
       cgstate, minfo
-  ) minfo in*)
+  ) minfo in
   let cgstate, minfo = 
+  prerr_endline ("Object 263");
     match o.objSignals = [] with
     | true -> cgstate, minfo
     | false -> group 
               (fun m -> indent 
                         (fun i -> 
                         let acc = line "open GtkSignal" i 
-                        |> line "openGobject"
+                        |> line "open Gobject"
                         |> line "open Data"
-                        in cgstate, List.fold_left (fun info s -> genSignal s n cfg info) acc o.objSignals) 
+                        in 
+                        prerr_endline ("Object 273");
+                        cgstate, List.fold_left (fun info s -> genSignal s n cfg info) acc o.objSignals) 
                         (line "module S = struct" m) |> (fun (x, y) -> x, line "end" y)) minfo
-  in let cgstate, minfo = group (fun minfo -> cgstate, (line ("let cast w : " ^ 
+  in 
+  prerr_endline ("Object 277");
+  let cgstate, minfo = group (fun minfo -> cgstate, (line ("let cast w : " ^ 
                         nsOCamlType n.namespace n ^
                         " Gobject.obj = Gobject.try_cast w \"" ^
                         nspace ^ objectName ^ "\"")) minfo ) minfo
@@ -278,6 +287,7 @@ let genObject' (cfg, cgstate, minfo) n o ocamlName =
   in let minfo = gline ("  (* Methods *)") minfo in
   let methods = o.objMethods in
   let methods' = List.filter (fun x -> not(isSetterOrGetter o x)) methods in
+  prerr_endline ("Object 286");
   let cgstate, minfo = 
     List.fold_left (fun (cgstate, minfo) f ->
       let action = fun cgstate minfo -> genMethod cfg cgstate minfo n f in
@@ -346,6 +356,7 @@ let genCInterfaceTypeInit cgstate minfo i n =
 
 
 let genInterface cfg cgstate minfo n iface =
+  prerr_endline ("______GENINTERFACE");
   let name' = upperName n in
   let ocamlName = escapeOCamlReserved (camelCaseToSnakeCase n.name) in
   let isGO = apiIsGObject cfg n (APIInterface iface) in
@@ -410,6 +421,7 @@ let genInterface cfg cgstate minfo n iface =
                 ) minfo
               in cgstate, minfo) minfo
           else 
+          
             cgstate, minfo
           in cgstate, minfo      
         else

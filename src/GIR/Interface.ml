@@ -25,7 +25,15 @@ type interface ={
 let parseInterface ns aliases el =
   let name = parseName ns el in
   let props = List.map (parseProperty ns aliases) (parseChildrenWithLocalName "property" el) in
+  (*let signalParse = List.length((parseChildrenWithNSName GLibGIRNS "signal" el)) in
+  prerr_endline ("NOME: " ^ name.name);
+  prerr_endline ("#####################################" ^ string_of_int signalParse);*)
   let signals = List.map (parseSignal ns aliases) (parseChildrenWithNSName GLibGIRNS "signal" el) in
+  (*if name.name = "AppInfo" 
+  then 
+  let _ = prerr_endline (name.namespace) in
+  let _ = prerr_endline (string_of_int(List.length signals)) in assert false;
+  else*)
   let typeInit = queryAttrWithNamespace GLibGIRNS "get-type" el in
   let methods = List.map (parseMethod ns aliases OrdinaryMethod) (parseChildrenWithLocalName "method" el) in
   let functions = List.map (parseMethod ns aliases MemberFunction) (parseChildrenWithLocalName "function" el) in
