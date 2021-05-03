@@ -129,7 +129,7 @@ let subelements el =
 
 
 (* restituisce tutti i figli di un elemento che hanno come local name quello dato*)    
-(* string -> xml -> xml list *) (*TODO come viene gestito il namespace? Devo togliere ciò che c'è prima dei due punti?*)
+(* string -> xml -> xml list *) 
 let childElemsWithLocalName n el =
   let localNameMatch e = 
     Xml.tag e = n in
@@ -138,22 +138,8 @@ let childElemsWithLocalName n el =
 (* come sopra ma specificando anche il namespace *)    
 (* GIRXMLNamespace -> string -> xml -> xml list *)
 let childElemsWithNSName ns n el =
-   (* prerr_endline("tag elemento: " ^ Xml.tag el);
-    prerr_endline("NOME NUOVO");
-    prerr_endline("localName: " ^ n);
-    prerr_endline("nameSpace: " ^ (girNamespace ns));
-    prerr_endline("namePrefix: " ^ (girXMLNamespaceToPrefix ns));
-    prerr_endline("\n");*)
     let name = {nameLocalName = n; nameNamespace = Some (girNamespace ns); namePrefix = Some (girXMLNamespaceToPrefix ns);} in
     let nameMatch e = element_to_name e |> (fun x -> x = name) in
-    (*let _ = List.iter (
-        fun x -> 
-                if localName(Xml.tag x) = "signal" then
-                (prerr_endline ("nome: " ^ Xml.tag x);
-                 prerr_endline ("localName: " ^ localName(Xml.tag x));
-                 prerr_endline ("prefix: " ^ Option.value (get_prefix (Xml.tag x)) ~default:"");
-                 prerr_endline ("namespace: " ^(get_prefix (Xml.tag x) |> prefixToGIRNamespace));))
-        (subelements el) in*)
     List.filter nameMatch (subelements el)
 
 (* restituisce il primo figlio di un elemento con il nome locale specficato *)
@@ -175,13 +161,13 @@ let getElementContent el =
 (* string -> xml -> string option *)
 let lookupAttr attr element =
     try
-        Some (Xml.attrib element attr) (*TODO da capire come viene poi chiamata, per vedere se devo lasciare il namespace prima dei due punti*)
-    with Xml.No_attribute _ -> (*prerr_endline ("Errore No_attribute: " ^ str);*) None
+        Some (Xml.attrib element attr) 
+    with Xml.No_attribute _ -> None
 
 (*prendo il local name dell'attributo e ci piazzo davanti il namespace dato, e poi cerco*)
 (* GIRXMLNamespace -> string -> xml -> string option *)
 let lookupAttrWithNamespace ns attr element =
-    let attr_ns = girXMLNamespaceToPrefix ns ^ ":" ^  attr in (*TODO dovrebbe andare*)
+    let attr_ns = girXMLNamespaceToPrefix ns ^ ":" ^  attr in
     lookupAttr attr_ns element 
 
 

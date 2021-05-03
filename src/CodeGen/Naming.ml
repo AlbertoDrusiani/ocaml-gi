@@ -23,10 +23,14 @@ let hyphensToUnderscores =
 let explode s =
   List.init (String.length s) (String.get s)
 
+let is_digit = function '0' .. '9' -> true | _ -> false
+
 (* string -> string *)
 let camelCaseToSnakeCase s =
+        prerr_endline ("iniziale proprio: " ^ s);
     let f c =
-        match (c = (Char.uppercase_ascii c)) && (c != '_') with
+        (*FIXME* c'è un modo migliote per controllare se c è maiuscolo?*)
+        match (c = (Char.uppercase_ascii c)) && (c != '_') && (not(is_digit(c))) with
         | true -> "_" ^ String.lowercase_ascii (String.make 1 c)
         | false -> String.make 1 c
      in String.concat "" (List.map f (explode (lcFirst s)))
@@ -106,7 +110,8 @@ let escapeOCamlReserved s =
 
 let ocamlIdentifier n =
     match n with
-    |  { namespace = _; name = nm} ->  camelCaseToSnakeCase nm |> escapeOCamlReserved
+    |  { namespace = _; name = nm} -> 
+     camelCaseToSnakeCase nm |> escapeOCamlReserved
 
 
 let ocamlIdentifierNs n =

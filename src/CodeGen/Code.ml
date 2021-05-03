@@ -177,32 +177,7 @@ let rec mergeInfoState oldState newState =
   let newDeps = StringSet.union (oldState.moduleDeps) (newState.moduleDeps) in
   let newCDeps = StringSet.union (oldState.cDeps) (newState.cDeps) in
   let union_f _ m1 m2 = Some (mergeInfo m1 m2) in
- (*prerr_endline ("I submodules dello stato vecchio sono: ");
-  StringMap.iter (fun k v -> if 
-      StringMap.cardinal oldState.submodules < 5
-      then prerr_endline("Chiave: " ^ k ^ ". Valore: " ^ dotModulePath v.modulePath)) oldState.submodules;
-  prerr_endline ("I submodules dello stato nuovo sono: ");
-  StringMap.iter (fun k v -> if 
-      StringMap.cardinal oldState.submodules < 5 
-      then prerr_endline("Chiave: " ^ k ^ ". Valore: " ^ dotModulePath v.modulePath)) newState.submodules;*)
- 
   let newSubmodules = StringMap.union union_f oldState.submodules newState.submodules in
-
-  (*prerr_endline ("I submodules dello stato aggiornato sono: " ^ string_of_int(StringMap.cardinal newSubmodules));*)
-  (*StringMap.iter (fun k v -> if (*dotModulePath v.modulePath = "GLib" || 
-  dotModulePath v.modulePath = "Constant" || 
-  dotModulePath v.modulePath = "GLib.Constant" ||
-  dotModulePath newState.modulePath = "GLib.Constant" ||*)
-  StringMap.cardinal newSubmodules < 6
-  then prerr_endline ("Chiave: " ^ k ^ ". Valore :" ^ dotModulePath v.modulePath)) newSubmodules;
-  prerr_endline ("I submodules dei submodules stato aggiornato sono: " ^ string_of_int(StringMap.cardinal newSubmodules));
-  StringMap.iter (fun k v -> if (*dotModulePath v.modulePath = "GLib" || 
-  dotModulePath v.modulePath = "Constant" || 
-  dotModulePath v.modulePath = "GLib.Constant" ||
-  dotModulePath newState.modulePath = "GLib.Constant" ||*)
-  StringMap.cardinal newSubmodules < 6
-  then prerr_endline ("Chiave: " ^ k ^ ". Valore :" ^ dotModulePath v.modulePath)) newSubmodules;*)
-
   let newExports = oldState.moduleExports @ newState.moduleExports in
   let newImports = ModulePathSet.union oldState.qualifiedImports newState.qualifiedImports in
   let newCCode = Code ((getCode oldState.cCode) @ (getCode newState.cCode)) in
@@ -568,7 +543,7 @@ let qualifiedImport minfo mp =
 
 let qualified cfg minfo mp n =
   let minfo = 
-  if cfg.hConfig.modName != n.namespace
+  if cfg.hConfig.modName <> n.namespace
   then registerNSDependency minfo n.namespace
   else minfo
   in if mp = minfo.modulePath
@@ -629,13 +604,10 @@ let addCFile state file = file::state
 let writeModuleInfo state isVerbose dirPrefix _dependencies minfo =
   let mapElems = List.map (fun (_, v) -> v) (StringMap.bindings minfo.submodules) in
   let _submodulePaths = List.map (fun v -> v.modulePath) mapElems in
-  (*let _ = List.iter (fun x -> prerr_endline ("subModulePath: " ^ String.concat " " x.modulePathToList))_submodulePaths in*)
   let _submoduleExports = List.map dotWithPrefix _submodulePaths in
   (*let _pkgRoot = _ in*)
   let nspace = getLibName dirPrefix in
   let fname = modulePathToFilePath dirPrefix minfo.modulePath "" in
-  (*prerr_endline ("dirPrefix è: " ^ Option.get dirPrefix);
-  prerr_endline ("fname è: " ^ fname);*)
   let dirname = Filename.dirname fname in
   let code = codeToText minfo.moduleCode in
   (*let _deps = importedDeps *)
@@ -670,7 +642,7 @@ let writeModuleInfo state isVerbose dirPrefix _dependencies minfo =
   | true -> state
   | false ->
     let cStubsFile = modulePathToFilePath dirPrefix minfo.modulePath ".c" in
-    let deps' = List.filter (fun x -> x != "Widget") (minfo.cDeps |> StringSet.to_seq |> List.of_seq) in
+    let deps' = List.filter (fun x -> x <> "Widget") (minfo.cDeps |> StringSet.to_seq |> List.of_seq) in
     let deps = String.concat "\n" (List.map (fun d -> "#include \"GI" ^ d ^ ".h\"") deps') in
     let state = addCFile state cStubsFile in
     writeFile cStubsFile (String.concat "\n" [deps; genCStubs minfo]); state
@@ -699,16 +671,7 @@ let hdsafe l =
   | x -> [List.hd x]
 
 let rec writeModuleTree' state verbose_ dirPrefix dependencies minfo =
-  (*prerr_endline ("state: " ^ String.concat "" state);*)
   let mapElems = List.map (fun (_, v) -> v) (StringMap.bindings minfo.submodules) in
-  (*prerr_endline ("La lista di figli pre filtro è lunga: " ^ string_of_int (List.length mapElems));
-  let submodulesName = List.map (fun x -> dotModulePath x.modulePath) mapElems in
-  prerr_endline ("Ed è composta da: \n" ^ String. concat "\n" submodulesName);
-  
-  let mapElems = List.filteri (fun i _ -> i < 6) (List.map (fun (_, v) -> v) (StringMap.bindings minfo.submodules)) in
-  prerr_endline ("La lista di figli è lunga: " ^ string_of_int (List.length mapElems));
-  let submodulesName = List.map (fun x -> dotModulePath x.modulePath) mapElems in
-  prerr_endline ("Ed è composta da: \n" ^ String. concat "\n" submodulesName);*)
   let state, subModulePaths = 
     List.fold_left (fun (state, l) minfo -> 
       let t = writeModuleTree' state verbose_ dirPrefix dependencies minfo
@@ -716,7 +679,6 @@ let rec writeModuleTree' state verbose_ dirPrefix dependencies minfo =
       (state,[]) mapElems
   in
   let state = writeModuleInfo state verbose_ dirPrefix dependencies minfo in
-  (*prerr_endline ("Resituisco: " ^ String.concat " " (dotWithPrefix minfo.modulePath::subModulePaths));*)
   state, (dotWithPrefix minfo.modulePath) :: subModulePaths
 
 

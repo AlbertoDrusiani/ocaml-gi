@@ -72,9 +72,7 @@ let genSignalClass (cfg, minfo) n o =
     ) minfo o.objInterfaces in
     minfo
   in 
-  (*if n.name = "Cancellable" 
-  then let _ = prerr_endline (string_of_int(List.length o.objSignals)) in assert false;
-  else*)
+
   let minfo = List.fold_left (fun info s -> genGSignal s n cfg info) minfo o.objSignals in
   let minfo = gline "end" minfo  in
   gblank minfo
@@ -92,7 +90,7 @@ let cTypeInit cTypeName typeInit =
 
 let genCObjectTypeInit cgstate minfo o n =
   match o with
-  | obj when obj.objTypeInit != "" -> 
+  | obj when obj.objTypeInit <> "" -> 
       let cgstate, minfo = cline (cTypeInit (camelCaseToSnakeCase (n.namespace ^ n.name)) obj.objTypeInit) minfo cgstate  in
       cgstate, minfo
   | _ -> cgstate, minfo
@@ -119,7 +117,7 @@ let isMakeParamsParent ns nm =
   match ns, nm with
   | _, {namespace = "GObject"; name = "Object"} -> false
   | currNS, {namespace = ns; name = _} -> 
-    if currNS != ns 
+    if currNS <> ns 
     then false
     else true
 
@@ -218,7 +216,6 @@ let genAdditionalObjectConstructor n ocamlClassName m cfg minfo =
 
 
 let genObject' (cfg, cgstate, minfo) n o ocamlName =
-prerr_endline ("______GENOBJECT'");
   let parents = instanceTree cfg n in 
   let name' = upperName n in
   let nspace = n.namespace in
@@ -241,7 +238,6 @@ prerr_endline ("______GENOBJECT'");
       | _ -> "GObj.gtkobj"
       end
     in 
-    prerr_endline ("Object 244");
     let minfo = gline ("  inherit " ^ parentSkelClass ^ " obj") minfo in
     let minfo = List.fold_left (
         fun minfo iface ->
@@ -260,7 +256,6 @@ prerr_endline ("______GENOBJECT'");
       cgstate, minfo
   ) minfo in
   let cgstate, minfo = 
-  prerr_endline ("Object 263");
     match o.objSignals = [] with
     | true -> cgstate, minfo
     | false -> group 
@@ -270,11 +265,9 @@ prerr_endline ("______GENOBJECT'");
                         |> line "open Gobject"
                         |> line "open Data"
                         in 
-                        prerr_endline ("Object 273");
                         cgstate, List.fold_left (fun info s -> genSignal s n cfg info) acc o.objSignals) 
                         (line "module S = struct" m) |> (fun (x, y) -> x, line "end" y)) minfo
   in 
-  prerr_endline ("Object 277");
   let cgstate, minfo = group (fun minfo -> cgstate, (line ("let cast w : " ^ 
                         nsOCamlType n.namespace n ^
                         " Gobject.obj = Gobject.try_cast w \"" ^
@@ -287,7 +280,6 @@ prerr_endline ("______GENOBJECT'");
   in let minfo = gline ("  (* Methods *)") minfo in
   let methods = o.objMethods in
   let methods' = List.filter (fun x -> not(isSetterOrGetter o x)) methods in
-  prerr_endline ("Object 286");
   let cgstate, minfo = 
     List.fold_left (fun (cgstate, minfo) f ->
       let action = fun cgstate minfo -> genMethod cfg cgstate minfo n f in
@@ -305,7 +297,8 @@ prerr_endline ("______GENOBJECT'");
   let minfo = gblank minfo in
   let minfo = genDefaultObjectConstructor n ocamlName cfg minfo in
   let constructors = 
-    List.filter (fun m -> m.methodType = Constructor && m.methodName.name != "new") o.objMethods in
+    List.filter (fun m -> 
+    (m.methodType = Constructor) && (m.methodName.name <> "new")) o.objMethods in
   let cgstate, minfo =
     List.fold_left (fun (cgstate, info) m -> 
                     let cgstate, minfo, canGenerate = canGenerateCallable cfg cgstate info m.methodCallable in

@@ -261,7 +261,7 @@ let genMethod cfg cgstate minfo cn m  =
   in 
   match m.methodType with
   | Constructor ->
-    if m.methodName.name != "new"
+    if m.methodName.name <> "new"
     then
       let returnsGObject = 
         match m.methodCallable.returnType with

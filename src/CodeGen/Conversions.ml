@@ -12,7 +12,7 @@ type expose_closures =
 
 
 let conversionError converter case =
-  prerr_endline ("conversion error");raise (CGError (CGErrorNotImplemented ("This " ^ converter ^ " (" ^ case ^ ") isn't implemented yet")))
+  raise (CGError (CGErrorNotImplemented ("This " ^ converter ^ " (" ^ case ^ ") isn't implemented yet")))
 
 
 let ocamlDataConvErr err =
@@ -204,7 +204,7 @@ let ocamlBasicType t =
   | TGType -> TextCon "GType"
   | TUTF8 -> TextCon "string"
   | TFloat -> TextCon "float"
-  | TDouble -> TextCon "double"
+  | TDouble -> TextCon "float"
   | TUniChar -> TextCon "char"
   | TFileName -> TextCon "string"
   | TIntPtr -> TextCon "error"

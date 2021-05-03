@@ -41,12 +41,6 @@ module ArgMap = Map.Make(Arg)
 
 (* xml -> transfer *) 
 let parseTransfer el =
-  (*TODO debugging*)
-  (*let str = match lookupAttr "name" el with
-    | Some c -> c
-    | None -> "NONE"
-  in*)
-  (*prerr_endline ("L'elemento è un: " ^ (Xml.tag el) ^ " con name = " ^ str);*)
   match getAttr "transfer-ownership" el with
   | "none" -> TransferNothing
   | "container" -> TransferContainer

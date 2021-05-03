@@ -27,14 +27,13 @@ let union_f _ v1 _ =
 
 
 
-(*per ora non considero gli overrides e le dipendenze*)
+(*per ora non considero gli overrides*)
 (*string -> string -> bool -> ModuleInfo*)
 let genLibraryCode name version verbosity (*_overrides*) =
   (*TODO dummy value, da implementare questa parte*)
   (*let ovs = defaultOverrides in*)
   (*let gir(*, girDeps*) = loadRawGIRInfo verbosity name (Some version) (*[]*) (*(ovs.girFixups)*) in*)
   let gir, girDeps = loadGIRInfo verbosity name (Some version) [] [] in
-  prerr_endline ("Parsing di " ^ name ^ " completato!");
   let dependencies = List.map (fun x -> x.girNSName ) girDeps in 
   (*let apis, deps = filterAPIsAndDeps (*ovs*) gir (*girDeps*) in*)
   let apis = gir.girAPIs |> List.to_seq |> NameMap.of_seq in
@@ -43,8 +42,6 @@ let genLibraryCode name version verbosity (*_overrides*) =
   let allAPIs = NameMap.union union_f apis deps in
 
   let cfg = {modName = name; verbose = verbosity; (*overrides = ovs*)} in
-  (*genCode cfg allAPIs (toModulePath name) (genModule apis), dependencies*)
-  (*let cfg, cgstate, minfo = setContext cfg apis (toModulePath name) in*)
   genCode cfg allAPIs (toModulePath name) (fun (cfg, cgstate, minfo) -> genModule (cfg, cgstate, minfo) apis), dependencies
 
 
